@@ -6,26 +6,19 @@ import { useAuthStore, isStaff } from '@/lib/auth-store';
 import { fetchMe } from '@/lib/services/auth';
 
 /**
- * Guards a page/layout: confirms the session (via /auth/me, using the httpOnly refresh
- * cookie if the in-memory access token is gone) and redirects to /login if unauthenticated
- * or not a staff role.
+ * Guards a page/layout: confirms the session against Better Auth's own
+ * session cookie (sent automatically via axios's `withCredentials`) and
+ * redirects to /login if unauthenticated or not a staff role.
  */
 export function useRequireAuth() {
   const router = useRouter();
-  const { user, accessToken, updateUser, clear } = useAuthStore();
+  const { user, updateUser, clear } = useAuthStore();
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
 
     async function verify() {
-      if (!accessToken) {
-        if (!cancelled) {
-          clear();
-          router.replace('/login');
-        }
-        return;
-      }
       try {
         const me = await fetchMe();
         if (cancelled) return;
@@ -35,7 +28,7 @@ export function useRequireAuth() {
           return;
         }
         const current = useAuthStore.getState().user;
-        if (current) updateUser({ ...current, ...me });
+        updateUser({ ...(current ?? {}), ...me } as typeof current & typeof me);
       } catch {
         if (!cancelled) {
           clear();

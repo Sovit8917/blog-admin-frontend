@@ -1,31 +1,70 @@
-import { api, unwrap } from '../api';
+import { authClient } from '../auth/client';
 import type { AuthUser, CurrentUser } from '../types';
 
 export interface LoginResponse {
   user: AuthUser;
-  accessToken: string;
-  refreshToken: string;
 }
 
-export async function login(email: string, password: string) {
-  const res = await api.post('/auth/login', { email, password });
-  return unwrap<LoginResponse>(res);
+function toAuthUser(u: Record<string, unknown>): AuthUser {
+  return {
+    id: u.id as string,
+    email: u.email as string,
+    username: u.username as string,
+    name: u.name as string,
+    role: u.role as AuthUser['role'],
+    avatarUrl: (u.image as string | null) ?? null,
+    bio: (u.bio as string | null) ?? null,
+    isActive: (u.isActive as boolean) ?? true,
+  };
+}
+
+export async function login(email: string, password: string): Promise<LoginResponse> {
+  const { data, error } = await authClient.signIn.email({ email, password });
+  if (error || !data?.user) throw new Error(error?.message || 'Invalid email or password');
+  return { user: toAuthUser(data.user as Record<string, unknown>) };
+}
+
+export function loginWithGoogle(redirectTo = '/') {
+  return authClient.signIn.social({ provider: 'google', callbackURL: redirectTo });
 }
 
 export async function logout() {
   try {
-    await api.post('/auth/logout');
+    await authClient.signOut();
   } catch {
     // ignore — we're clearing local session regardless
   }
 }
 
-export async function fetchMe() {
-  const res = await api.get('/auth/me');
-  return unwrap<CurrentUser>(res);
+export async function fetchMe(): Promise<CurrentUser> {
+  const { data } = await authClient.getSession();
+  if (!data?.user) throw new Error('Not authenticated');
+  const u = data.user as Record<string, unknown>;
+  return {
+    id: u.id as string,
+    email: u.email as string,
+    username: u.username as string,
+    role: u.role as CurrentUser['role'],
+    name: u.name as string | undefined,
+  };
 }
 
 export async function changePassword(currentPassword: string, newPassword: string) {
-  const res = await api.post('/auth/change-password', { currentPassword, newPassword });
-  return unwrap<{ message: string }>(res);
+  const { error } = await authClient.changePassword({
+    currentPassword,
+    newPassword,
+    revokeOtherSessions: true,
+  });
+  if (error) throw new Error(error.message || 'Could not change password');
+  return { message: 'Password updated' };
+}
+
+export async function forgotPassword(email: string) {
+  const { error } = await authClient.forgetPassword({ email, redirectTo: '/reset-password' });
+  if (error) throw new Error(error.message || 'Something went wrong');
+}
+
+export async function resetPassword(newPassword: string, token: string) {
+  const { error } = await authClient.resetPassword({ newPassword, token });
+  if (error) throw new Error(error.message || 'This link may have expired');
 }

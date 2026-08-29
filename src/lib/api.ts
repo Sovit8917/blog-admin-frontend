@@ -1,65 +1,31 @@
 'use client';
 
-import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
-import { useAuthStore } from './auth-store';
+import axios, { type AxiosError } from 'axios';
 
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
+// Root origin of the backend (no `/api/v1` prefix) — Better Auth's own
+// routes live at `${API_ORIGIN}/auth/*`, alongside but outside the REST API.
+export const API_ORIGIN = API_BASE_URL.replace(/\/api\/v\d+\/?$/, '').replace(/\/+$/, '');
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
-  withCredentials: true, // send/receive the httpOnly refresh cookie set by the backend
+  // Auth is a single Better Auth session cookie — no Authorization header
+  // to attach, so every request just needs to carry cookies.
+  withCredentials: true,
 });
-
-api.interceptors.request.use((config) => {
-  const token = useAuthStore.getState().accessToken;
-  if (token) {
-    config.headers = config.headers ?? {};
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-let refreshPromise: Promise<string | null> | null = null;
-
-async function refreshAccessToken(): Promise<string | null> {
-  if (!refreshPromise) {
-    refreshPromise = axios
-      .post(`${API_BASE_URL}/auth/refresh`, {}, { withCredentials: true })
-      .then((res) => {
-        const data = res.data?.data ?? res.data;
-        const token: string | null = data?.accessToken ?? null;
-        if (token) {
-          const current = useAuthStore.getState().user;
-          if (current) useAuthStore.getState().setSession(token, current);
-        }
-        return token;
-      })
-      .catch(() => {
-        useAuthStore.getState().clear();
-        return null;
-      })
-      .finally(() => {
-        refreshPromise = null;
-      });
-  }
-  return refreshPromise;
-}
 
 api.interceptors.response.use(
   (res) => res,
   async (error: AxiosError) => {
-    const original = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
     const status = error.response?.status;
-    const url = original?.url || '';
+    const url = (error.config?.url as string) || '';
 
-    if (status === 401 && original && !original._retry && !url.includes('/auth/login') && !url.includes('/auth/refresh')) {
-      original._retry = true;
-      const newToken = await refreshAccessToken();
-      if (newToken) {
-        original.headers = original.headers ?? {};
-        original.headers.Authorization = `Bearer ${newToken}`;
-        return api(original);
-      }
+    // A 401 here means the session cookie is missing/expired — Better Auth
+    // manages its own rolling refresh server-side, so unlike the old JWT
+    // setup there's nothing to retry; just bounce to /login.
+    if (status === 401 && !url.includes('/auth/')) {
+      const { useAuthStore } = await import('./auth-store');
+      useAuthStore.getState().clear();
       if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
         window.location.href = '/login';
       }
@@ -67,6 +33,7 @@ api.interceptors.response.use(
     return Promise.reject(error);
   },
 );
+
 
 /** Unwraps the backend's { success, data } envelope. */
 export function unwrap<T>(res: { data: any }): T {
@@ -79,5 +46,7 @@ export function apiErrorMessage(err: unknown, fallback = 'Something went wrong')
     if (Array.isArray(msg)) return msg.join(', ');
     if (typeof msg === 'string') return msg;
   }
+  // Better Auth calls (login, forgot/reset password, etc.) throw plain Errors.
+  if (err instanceof Error && err.message) return err.message;
   return fallback;
 }
