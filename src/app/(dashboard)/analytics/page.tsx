@@ -2,9 +2,10 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import toast from 'react-hot-toast';
-import { Eye, FileText, Users, Mail, Layers, Flame } from 'lucide-react';
-import { fetchAnalyticsOverview } from '@/lib/services/analytics';
-import type { AnalyticsOverview } from '@/lib/types';
+import { Eye, FileText, Users, Mail, Layers, Flame, Sparkles, MousePointerClick } from 'lucide-react';
+import { fetchAnalyticsOverview, fetchMostRead, fetchRecommendationStats } from '@/lib/services/analytics';
+import type { AnalyticsOverview, MostReadEntry, PostType, RecommendationStats } from '@/lib/types';
+import { CAREER_CONTENT_TYPES } from '@/lib/types';
 import { Card, CardBody } from '@/components/ui/Card';
 import { StatCard } from '@/components/ui/StatCard';
 import { Select } from '@/components/ui/Input';
@@ -20,15 +21,42 @@ const RANGE_OPTIONS = [
   { label: 'Last 90 days', value: 90 },
 ];
 
+const POST_TYPE_LABELS: Record<PostType, string> = {
+  ARTICLE: 'Article',
+  TUTORIAL: 'Tutorial',
+  NEWS: 'News',
+  CAREER_ADVICE: 'Career Advice',
+  INTERVIEW_PREP: 'Interview Prep',
+  RESUME_TIPS: 'Resume Tips',
+  SALARY_GUIDE: 'Salary Guide',
+};
+
+const SOURCE_LABELS: Record<string, string> = {
+  followed_author: 'Followed Author',
+  followed_topic: 'Followed Topic',
+  read_similarity: 'Read Similarity',
+  trending_fallback: 'Trending Fallback',
+  unknown: 'Unknown',
+};
+
 export default function AnalyticsPage() {
   const [data, setData] = useState<AnalyticsOverview | null>(null);
+  const [mostRead, setMostRead] = useState<MostReadEntry[] | null>(null);
+  const [recStats, setRecStats] = useState<RecommendationStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [days, setDays] = useState(30);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      setData(await fetchAnalyticsOverview(days));
+      const [overview, top, rec] = await Promise.all([
+        fetchAnalyticsOverview(days),
+        fetchMostRead(days, 10),
+        fetchRecommendationStats(days),
+      ]);
+      setData(overview);
+      setMostRead(top);
+      setRecStats(rec);
     } catch (err) {
       toast.error(apiErrorMessage(err, 'Failed to load analytics'));
     } finally {
@@ -122,6 +150,107 @@ export default function AnalyticsPage() {
           </CardBody>
         </Card>
       </div>
+
+      <Card>
+        <CardBody>
+          <h3 className="mb-3 flex items-center gap-1.5 text-[13.5px] font-semibold text-slate-800">
+            <Flame className="h-4 w-4 text-brand-600" /> Most read — content performance ({days}d)
+          </h3>
+          {!mostRead?.length ? (
+            <EmptyState icon={Flame} title="Not enough data yet" />
+          ) : (
+            <Table>
+              <Thead>
+                <tr>
+                  <Th>Post</Th>
+                  <Th>Type</Th>
+                  <Th>Views ({days}d)</Th>
+                  <Th>Unique</Th>
+                  <Th>Likes</Th>
+                  <Th>Comments</Th>
+                </tr>
+              </Thead>
+              <tbody>
+                {mostRead.map((m) => (
+                  <Tr key={m.post.id}>
+                    <Td className="max-w-[260px] truncate font-medium text-slate-800">{m.post.title}</Td>
+                    <Td>
+                      <Badge tone={CAREER_CONTENT_TYPES.includes(m.post.postType) ? 'violet' : 'slate'}>
+                        {POST_TYPE_LABELS[m.post.postType] || m.post.postType}
+                      </Badge>
+                    </Td>
+                    <Td>{m.periodViews}</Td>
+                    <Td>{m.periodUniqueViews ?? <span className="text-slate-300">—</span>}</Td>
+                    <Td>{m.post.likeCount}</Td>
+                    <Td>{m.post.commentCount}</Td>
+                  </Tr>
+                ))}
+              </tbody>
+            </Table>
+          )}
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardBody>
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="flex items-center gap-1.5 text-[13.5px] font-semibold text-slate-800">
+              <Sparkles className="h-4 w-4 text-brand-600" /> Recommendation performance ({days}d)
+            </h3>
+            {recStats && (
+              <span className="flex items-center gap-1 text-[12.5px] text-slate-500">
+                <MousePointerClick className="h-3.5 w-3.5" /> {recStats.overallCtr}% overall CTR
+              </span>
+            )}
+          </div>
+          {!recStats || recStats.totalImpressions === 0 ? (
+            <EmptyState
+              icon={Sparkles}
+              title="No recommendation data yet"
+              description="Impressions and clicks from the 'For You' feed will show up here once the public site starts logging them."
+            />
+          ) : (
+            <div className="grid gap-4 lg:grid-cols-2">
+              <div>
+                <p className="mb-2 text-[12px] font-medium text-slate-500">By recommendation reason</p>
+                <div className="space-y-2">
+                  {recStats.bySource.map((s) => (
+                    <div key={s.source} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
+                      <Badge tone="violet">{SOURCE_LABELS[s.source] || s.source}</Badge>
+                      <span className="text-[12px] text-slate-500">
+                        {s.clicks}/{s.impressions} clicks · <span className="font-medium text-slate-700">{s.ctr}%</span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="mb-2 text-[12px] font-medium text-slate-500">Top clicked recommended posts</p>
+                {!recStats.topClickedPosts.length ? (
+                  <p className="text-[13px] text-slate-400">No clicks recorded yet.</p>
+                ) : (
+                  <Table>
+                    <Thead>
+                      <tr>
+                        <Th>Post</Th>
+                        <Th>Clicks</Th>
+                      </tr>
+                    </Thead>
+                    <tbody>
+                      {recStats.topClickedPosts.map((t) => (
+                        <Tr key={t.post.id}>
+                          <Td className="max-w-[220px] truncate font-medium text-slate-800">{t.post.title}</Td>
+                          <Td>{t.clicks}</Td>
+                        </Tr>
+                      ))}
+                    </tbody>
+                  </Table>
+                )}
+              </div>
+            </div>
+          )}
+        </CardBody>
+      </Card>
     </div>
   );
 }

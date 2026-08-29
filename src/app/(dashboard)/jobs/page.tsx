@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
-import { Plus, Search, Briefcase, Pencil, Trash2, Star, Users } from 'lucide-react';
+import { Plus, Search, Briefcase, Pencil, Trash2, Star, Users, AlarmClock } from 'lucide-react';
 import { listJobs, deleteJob } from '@/lib/services/jobs';
 import type { Job, JobStatus } from '@/lib/types';
 import { Card } from '@/components/ui/Card';
@@ -29,6 +29,7 @@ export default function JobsPage() {
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<JobStatus | ''>('');
+  const [closingSoon, setClosingSoon] = useState(false);
   const [toDelete, setToDelete] = useState<Job | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [applicantsFor, setApplicantsFor] = useState<Job | null>(null);
@@ -36,7 +37,13 @@ export default function JobsPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await listJobs({ page, limit: 12, search: search || undefined, status: status || undefined });
+      const res = await listJobs({
+        page,
+        limit: 12,
+        search: search || undefined,
+        status: status || undefined,
+        closingSoon: closingSoon || undefined,
+      });
       setItems(res.items);
       setTotal(res.total);
       setTotalPages(res.totalPages || Math.max(1, Math.ceil(res.total / res.limit)));
@@ -45,7 +52,7 @@ export default function JobsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, status]);
+  }, [page, search, status, closingSoon]);
 
   useEffect(() => {
     load();
@@ -53,7 +60,7 @@ export default function JobsPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [search, status]);
+  }, [search, status, closingSoon]);
 
   async function handleDelete() {
     if (!toDelete) return;
@@ -86,6 +93,16 @@ export default function JobsPage() {
               </option>
             ))}
           </Select>
+          <button
+            onClick={() => setClosingSoon((v) => !v)}
+            className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-[13px] font-medium transition-colors ${
+              closingSoon
+                ? 'border-amber-300 bg-amber-50 text-amber-700'
+                : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            <AlarmClock className="h-4 w-4" /> Closing soon
+          </button>
         </div>
         <Link href="/jobs/new">
           <Button>
@@ -119,6 +136,7 @@ export default function JobsPage() {
                   <Th>Company</Th>
                   <Th>Status</Th>
                   <Th>Applicants</Th>
+                  <Th>Expires</Th>
                   <Th>Updated</Th>
                   <Th className="text-right">Actions</Th>
                 </tr>
@@ -148,6 +166,23 @@ export default function JobsPage() {
                       >
                         <Users className="h-3.5 w-3.5" /> {job.applicationCount}
                       </button>
+                    </Td>
+                    <Td>
+                      {job.status === 'OPEN' && job.expiresAt ? (
+                        (() => {
+                          const days = Math.ceil((new Date(job.expiresAt).getTime() - Date.now()) / 86400000);
+                          if (days <= 7) {
+                            return (
+                              <Badge tone={days <= 2 ? 'red' : 'amber'} className="gap-1">
+                                <AlarmClock className="h-3 w-3" /> {days <= 0 ? 'Expired' : `${days}d left`}
+                              </Badge>
+                            );
+                          }
+                          return <span className="text-[12px] text-slate-400">{formatDateTime(job.expiresAt)}</span>;
+                        })()
+                      ) : (
+                        <span className="text-slate-300">—</span>
+                      )}
                     </Td>
                     <Td>{formatDateTime(job.updatedAt)}</Td>
                     <Td>

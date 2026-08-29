@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { Plus, Search, FileText, Eye, Pencil, Trash2, Star } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { listPosts, deletePost } from '@/lib/services/posts';
-import type { Post, PostStatus } from '@/lib/types';
+import type { Post, PostStatus, PostType } from '@/lib/types';
+import { CAREER_CONTENT_TYPES } from '@/lib/types';
 import { Card } from '@/components/ui/Card';
 import { Table, Thead, Th, Tr, Td } from '@/components/ui/Table';
 import { Badge, statusTone } from '@/components/ui/Badge';
@@ -20,6 +21,18 @@ import { apiErrorMessage } from '@/lib/api';
 
 const STATUS_OPTIONS: PostStatus[] = ['DRAFT', 'IN_REVIEW', 'SCHEDULED', 'PUBLISHED', 'ARCHIVED'];
 
+const POST_TYPE_LABELS: Record<PostType, string> = {
+  ARTICLE: 'Article',
+  TUTORIAL: 'Tutorial',
+  NEWS: 'News',
+  CAREER_ADVICE: 'Career Advice',
+  INTERVIEW_PREP: 'Interview Prep',
+  RESUME_TIPS: 'Resume Tips',
+  SALARY_GUIDE: 'Salary Guide',
+};
+
+const GENERAL_TYPES: PostType[] = ['ARTICLE', 'TUTORIAL', 'NEWS'];
+
 export default function PostsPage() {
   const [items, setItems] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,13 +41,20 @@ export default function PostsPage() {
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<PostStatus | ''>('');
+  const [postType, setPostType] = useState<PostType | ''>('');
   const [toDelete, setToDelete] = useState<Post | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await listPosts({ page, limit: 12, search: search || undefined, status: status || undefined });
+      const res = await listPosts({
+        page,
+        limit: 12,
+        search: search || undefined,
+        status: status || undefined,
+        postType: postType || undefined,
+      });
       setItems(res.items);
       setTotal(res.total);
       setTotalPages(res.totalPages || Math.max(1, Math.ceil(res.total / res.limit)));
@@ -43,7 +63,7 @@ export default function PostsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, status]);
+  }, [page, search, status, postType]);
 
   useEffect(() => {
     load();
@@ -51,7 +71,7 @@ export default function PostsPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [search, status]);
+  }, [search, status, postType]);
 
   async function handleDelete() {
     if (!toDelete) return;
@@ -89,6 +109,23 @@ export default function PostsPage() {
               </option>
             ))}
           </Select>
+          <Select value={postType} onChange={(e) => setPostType(e.target.value as PostType | '')} className="sm:w-52">
+            <option value="">All content types</option>
+            <optgroup label="Career Content">
+              {CAREER_CONTENT_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {POST_TYPE_LABELS[t]}
+                </option>
+              ))}
+            </optgroup>
+            <optgroup label="General">
+              {GENERAL_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {POST_TYPE_LABELS[t]}
+                </option>
+              ))}
+            </optgroup>
+          </Select>
         </div>
         <Link href="/posts/new">
           <Button>
@@ -120,6 +157,7 @@ export default function PostsPage() {
                 <tr>
                   <Th>Title</Th>
                   <Th>Status</Th>
+                  <Th>Type</Th>
                   <Th>Category</Th>
                   <Th>Author</Th>
                   <Th>Stats</Th>
@@ -141,6 +179,11 @@ export default function PostsPage() {
                     </Td>
                     <Td>
                       <Badge tone={statusTone(post.status)}>{post.status}</Badge>
+                    </Td>
+                    <Td>
+                      <Badge tone={CAREER_CONTENT_TYPES.includes(post.postType) ? 'violet' : 'slate'}>
+                        {POST_TYPE_LABELS[post.postType] || post.postType}
+                      </Badge>
                     </Td>
                     <Td>{post.category?.name || <span className="text-slate-300">—</span>}</Td>
                     <Td>{post.author?.name || post.author?.username || <span className="text-slate-300">—</span>}</Td>

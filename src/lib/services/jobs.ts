@@ -18,6 +18,7 @@ export interface ListJobsParams {
   employmentType?: EmploymentType | '';
   experienceLevel?: ExperienceLevel | '';
   location?: string;
+  closingSoon?: boolean;
 }
 
 export async function listJobs(params: ListJobsParams = {}) {

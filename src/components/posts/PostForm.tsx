@@ -8,7 +8,8 @@ import { Field, Input, Textarea, Select } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-import type { Category, Post, PostStatus, Tag } from '@/lib/types';
+import type { Category, Post, PostStatus, PostType, Tag } from '@/lib/types';
+import { CAREER_CONTENT_TYPES } from '@/lib/types';
 import { listCategories } from '@/lib/services/categories';
 import { listTags, createTag } from '@/lib/services/tags';
 import { createPost, updatePost, type PostFormValues } from '@/lib/services/posts';
@@ -16,6 +17,16 @@ import { apiErrorMessage } from '@/lib/api';
 import { slugPreview } from '@/lib/utils';
 
 const STATUS_OPTIONS: PostStatus[] = ['DRAFT', 'IN_REVIEW', 'SCHEDULED', 'PUBLISHED', 'ARCHIVED'];
+const GENERAL_TYPES: PostType[] = ['ARTICLE', 'TUTORIAL', 'NEWS'];
+const POST_TYPE_LABELS: Record<PostType, string> = {
+  ARTICLE: 'Article',
+  TUTORIAL: 'Tutorial',
+  NEWS: 'News',
+  CAREER_ADVICE: 'Career Advice',
+  INTERVIEW_PREP: 'Interview Prep',
+  RESUME_TIPS: 'Resume Tips',
+  SALARY_GUIDE: 'Salary Guide',
+};
 
 export function PostForm({ post }: { post?: Post }) {
   const router = useRouter();
@@ -32,6 +43,7 @@ export function PostForm({ post }: { post?: Post }) {
     content: post?.content || '',
     coverImageUrl: post?.coverImageUrl || '',
     status: post?.status || 'DRAFT',
+    postType: post?.postType || 'ARTICLE',
     scheduledAt: post?.scheduledAt ? post.scheduledAt.slice(0, 16) : '',
     categoryId: post?.categoryId || '',
     tags: post?.tags?.map((t) => t.tag.name) || [],
@@ -184,6 +196,24 @@ export function PostForm({ post }: { post?: Post }) {
                     {s}
                   </option>
                 ))}
+              </Select>
+            </Field>
+            <Field label="Content Type" hint="Career content shows up on the Career Content filter">
+              <Select value={values.postType} onChange={(e) => set('postType', e.target.value as PostType)}>
+                <optgroup label="Career Content">
+                  {CAREER_CONTENT_TYPES.map((t) => (
+                    <option key={t} value={t}>
+                      {POST_TYPE_LABELS[t]}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="General">
+                  {GENERAL_TYPES.map((t) => (
+                    <option key={t} value={t}>
+                      {POST_TYPE_LABELS[t]}
+                    </option>
+                  ))}
+                </optgroup>
               </Select>
             </Field>
             {values.status === 'SCHEDULED' && (

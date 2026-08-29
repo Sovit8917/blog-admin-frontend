@@ -61,6 +61,7 @@ export interface Post {
   content: string;
   coverImageUrl?: string | null;
   status: PostStatus;
+  postType: PostType;
   publishedAt?: string | null;
   scheduledAt?: string | null;
   isFeatured: boolean;
@@ -149,14 +150,69 @@ export interface EmployerRequest {
   reviewedBy?: { id: string; name: string; username: string } | null;
 }
 
+export type PostType =
+  | 'ARTICLE'
+  | 'CAREER_ADVICE'
+  | 'INTERVIEW_PREP'
+  | 'RESUME_TIPS'
+  | 'SALARY_GUIDE'
+  | 'TUTORIAL'
+  | 'NEWS';
+
+export const CAREER_CONTENT_TYPES: PostType[] = [
+  'CAREER_ADVICE',
+  'INTERVIEW_PREP',
+  'RESUME_TIPS',
+  'SALARY_GUIDE',
+];
+
+export type ResourceType =
+  | 'DOCUMENTATION'
+  | 'TOOL'
+  | 'LIBRARY'
+  | 'COURSE'
+  | 'TUTORIAL'
+  | 'BOOK'
+  | 'COMMUNITY'
+  | 'OTHER';
+
+export interface DeveloperResource {
+  id: string;
+  title: string;
+  url: string;
+  description?: string | null;
+  resourceType: ResourceType;
+  tags: string[];
+  iconUrl?: string | null;
+  isFeatured: boolean;
+  isActive: boolean;
+  order: number;
+  clickCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface DashboardStats {
-  posts: { total: number; published: number; draft: number };
-  users: { total: number };
+  posts: {
+    total: number;
+    published: number;
+    draft: number;
+    byType: { postType: PostType; _count: number }[];
+  };
+  users: { total: number; new7d: number };
   comments: { total: number; pending: number };
   newsletter: { confirmedSubscribers: number };
   monetization: { activeAds: number; activeSponsors: number };
-  jobs: { total: number; open: number; applications: number };
-  recentPosts: { id: string; title: string; slug: string; status: PostStatus; updatedAt: string }[];
+  jobs: { total: number; open: number; applications: number; closingSoon: { count: number; items: JobClosingSoon[] } };
+  developerResources: {
+    total: number;
+    active: number;
+    featured: number;
+    byType: { resourceType: ResourceType; _count: number }[];
+  };
+  mostRead: MostReadEntry[];
+  pendingEmployerRequests: number;
+  recentPosts: { id: string; title: string; slug: string; status: PostStatus; postType: PostType; updatedAt: string }[];
   recentActivity: {
     id: string;
     action: string;
@@ -164,6 +220,28 @@ export interface DashboardStats {
     createdAt: string;
     user?: { username: string; name: string } | null;
   }[];
+}
+
+export interface JobClosingSoon {
+  id: string;
+  title: string;
+  slug: string;
+  expiresAt: string;
+  company?: { name: string; slug: string } | null;
+}
+
+export interface MostReadEntry {
+  post: { id: string; title: string; slug: string; postType: PostType; viewCount: number; likeCount: number; commentCount: number };
+  periodViews: number;
+  periodUniqueViews: number | null;
+}
+
+export interface RecommendationStats {
+  totalImpressions: number;
+  totalClicks: number;
+  overallCtr: number;
+  bySource: { source: string; impressions: number; clicks: number; ctr: number }[];
+  topClickedPosts: { post: { id: string; title: string; slug: string; postType: PostType }; clicks: number }[];
 }
 
 export interface PaginatedOffset<T> {

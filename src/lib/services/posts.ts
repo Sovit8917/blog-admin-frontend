@@ -1,5 +1,5 @@
 import { api, unwrap } from '../api';
-import type { Post, PostStatus, PaginatedOffset } from '../types';
+import type { Post, PostStatus, PostType, PaginatedOffset } from '../types';
 
 export interface ListPostsParams {
   page?: number;
@@ -8,6 +8,7 @@ export interface ListPostsParams {
   status?: PostStatus | '';
   category?: string;
   author?: string;
+  postType?: PostType | '';
 }
 
 export async function listPosts(params: ListPostsParams) {
@@ -26,6 +27,7 @@ export interface PostFormValues {
   content: string;
   coverImageUrl?: string;
   status?: PostStatus;
+  postType?: PostType;
   scheduledAt?: string;
   categoryId?: string;
   tags?: string[];

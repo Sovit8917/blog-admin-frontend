@@ -11,15 +11,36 @@ import {
   Megaphone,
   ArrowRight,
   Clock,
+  BookOpenText as ResourceIcon,
+  Code2,
+  AlarmClock,
+  Flame,
+  Eye,
 } from 'lucide-react';
 import { fetchDashboard } from '@/lib/services/dashboard';
-import type { DashboardStats } from '@/lib/types';
+import type { DashboardStats, PostType } from '@/lib/types';
+import { CAREER_CONTENT_TYPES } from '@/lib/types';
 import { StatCard } from '@/components/ui/StatCard';
 import { Card, CardHeader, CardBody } from '@/components/ui/Card';
 import { Badge, statusTone } from '@/components/ui/Badge';
 import { PageSpinner } from '@/components/ui/Spinner';
 import { formatDateTime } from '@/lib/utils';
 import { useAuthStore } from '@/lib/auth-store';
+
+const POST_TYPE_LABELS: Record<PostType, string> = {
+  ARTICLE: 'Article',
+  TUTORIAL: 'Tutorial',
+  NEWS: 'News',
+  CAREER_ADVICE: 'Career Advice',
+  INTERVIEW_PREP: 'Interview Prep',
+  RESUME_TIPS: 'Resume Tips',
+  SALARY_GUIDE: 'Salary Guide',
+};
+
+function daysUntil(dateStr: string) {
+  const diff = new Date(dateStr).getTime() - Date.now();
+  return Math.max(0, Math.ceil(diff / 86400000));
+}
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -34,6 +55,19 @@ export default function DashboardPage() {
 
   if (loading) return <PageSpinner label="Loading dashboard…" />;
   if (!stats) return null;
+
+  const byTypeArray = Array.isArray(stats.posts?.byType)
+    ? stats.posts.byType
+    : typeof stats.posts?.byType === 'object' && stats.posts?.byType !== null
+      ? Object.entries(stats.posts.byType).map(([postType, count]) => ({
+          postType: postType as PostType,
+          _count: typeof count === 'number' ? count : Number(count) || 0,
+        }))
+      : [];
+
+  const careerCount = byTypeArray
+    .filter((t) => CAREER_CONTENT_TYPES.includes(t.postType))
+    .reduce((sum, t) => sum + t._count, 0);
 
   return (
     <div className="space-y-6">
@@ -52,7 +86,7 @@ export default function DashboardPage() {
           icon={FileText}
           tone="brand"
         />
-        <StatCard label="Total Users" value={stats.users.total} icon={Users} tone="violet" />
+        <StatCard label="Total Users" value={stats.users.total} sub={`${stats.users.new7d} new (7d)`} icon={Users} tone="violet" />
         <StatCard
           label="Comments"
           value={stats.comments.total}
@@ -68,13 +102,8 @@ export default function DashboardPage() {
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <StatCard
-          label="Active Ads"
-          value={stats.monetization.activeAds}
-          icon={Megaphone}
-          tone="brand"
-        />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard label="Active Ads" value={stats.monetization.activeAds} icon={Megaphone} tone="brand" />
         <StatCard label="Active Sponsors" value={stats.monetization.activeSponsors} icon={Megaphone} tone="violet" />
         <StatCard
           label="Job Postings"
@@ -83,6 +112,99 @@ export default function DashboardPage() {
           icon={Briefcase}
           tone="amber"
         />
+        <StatCard
+          label="Jobs Closing Soon"
+          value={stats.jobs.closingSoon?.count ?? 0}
+          sub="within 7 days"
+          icon={AlarmClock}
+          tone="amber"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-2">
+        <StatCard
+          label="Career Content"
+          value={careerCount}
+          sub="Advice · Interview · Resume · Salary"
+          icon={ResourceIcon}
+          tone="violet"
+        />
+        <StatCard
+          label="Developer Resources"
+          value={stats.developerResources?.total ?? 0}
+          sub={`${stats.developerResources?.active ?? 0} active · ${stats.developerResources?.featured ?? 0} featured`}
+          icon={Code2}
+          tone="brand"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <Card>
+          <CardHeader
+            title="Jobs closing soon"
+            description="Open roles expiring within the next 7 days"
+            action={
+              <Link href="/jobs" className="flex items-center gap-1 text-[12.5px] font-medium text-brand-600 hover:text-brand-700">
+                View all <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            }
+          />
+          <CardBody className="p-0">
+            {!stats.jobs.closingSoon?.items?.length ? (
+              <p className="px-5 py-8 text-center text-[13px] text-slate-400">No jobs closing soon.</p>
+            ) : (
+              <ul className="divide-y divide-slate-50">
+                {stats.jobs.closingSoon.items.map((j) => (
+                  <li key={j.id}>
+                    <Link href={`/jobs/${j.id}`} className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-slate-50">
+                      <div className="min-w-0">
+                        <p className="truncate text-[13.5px] font-medium text-slate-800">{j.title}</p>
+                        <p className="mt-0.5 truncate text-[11.5px] text-slate-400">{j.company?.name}</p>
+                      </div>
+                      <Badge tone={daysUntil(j.expiresAt) <= 2 ? 'red' : 'amber'}>
+                        {daysUntil(j.expiresAt)}d left
+                      </Badge>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardHeader
+            title="Most read (7d)"
+            description="Top performing content by views"
+            action={
+              <Link href="/analytics" className="flex items-center gap-1 text-[12.5px] font-medium text-brand-600 hover:text-brand-700">
+                View all <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            }
+          />
+          <CardBody className="p-0">
+            {!stats.mostRead?.length ? (
+              <p className="px-5 py-8 text-center text-[13px] text-slate-400">Not enough data yet.</p>
+            ) : (
+              <ul className="divide-y divide-slate-50">
+                {stats.mostRead.map((m) => (
+                  <li key={m.post.id} className="flex items-center justify-between gap-3 px-5 py-3">
+                    <div className="min-w-0 flex items-center gap-2">
+                      <Flame className="h-3.5 w-3.5 shrink-0 text-orange-400" />
+                      <div className="min-w-0">
+                        <p className="truncate text-[13.5px] font-medium text-slate-800">{m.post.title}</p>
+                        <p className="mt-0.5 text-[11.5px] text-slate-400">{POST_TYPE_LABELS[m.post.postType]}</p>
+                      </div>
+                    </div>
+                    <span className="flex shrink-0 items-center gap-1 text-[12px] text-slate-500">
+                      <Eye className="h-3.5 w-3.5" /> {m.periodViews}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardBody>
+        </Card>
       </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
@@ -96,7 +218,7 @@ export default function DashboardPage() {
             }
           />
           <CardBody className="p-0">
-            {stats.recentPosts.length === 0 ? (
+            {!stats.recentPosts?.length ? (
               <p className="px-5 py-8 text-center text-[13px] text-slate-400">No posts yet.</p>
             ) : (
               <ul className="divide-y divide-slate-50">
@@ -124,7 +246,7 @@ export default function DashboardPage() {
         <Card>
           <CardHeader title="Recent activity" description="Latest audit log entries" />
           <CardBody className="p-0">
-            {stats.recentActivity.length === 0 ? (
+            {!stats.recentActivity?.length ? (
               <p className="px-5 py-8 text-center text-[13px] text-slate-400">No activity recorded yet.</p>
             ) : (
               <ul className="divide-y divide-slate-50">
@@ -148,3 +270,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+

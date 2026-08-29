@@ -22,6 +22,8 @@ import {
   Mail,
   BarChart3,
   History,
+  Code2,
+  ClipboardList,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/lib/auth-store';
@@ -58,8 +60,20 @@ const NAV_GROUPS: NavGroup[] = [
     label: 'Job Board',
     items: [
       { href: '/jobs', label: 'Jobs', icon: Briefcase, roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'AUTHOR'] },
+      {
+        href: '/applications',
+        label: 'Applications',
+        icon: ClipboardList,
+        roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR'],
+      },
       { href: '/companies', label: 'Companies', icon: Building2, roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'AUTHOR'] },
       { href: '/skills', label: 'Skills', icon: Sparkles, roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'AUTHOR'] },
+      {
+        href: '/developer-resources',
+        label: 'Developer Resources',
+        icon: Code2,
+        roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'AUTHOR'],
+      },
     ],
   },
   {
