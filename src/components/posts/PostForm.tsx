@@ -3,11 +3,12 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { Save, Send, X, ImagePlus } from 'lucide-react';
+import { Save, Send, X, ImagePlus, Image as ImageIcon } from 'lucide-react';
 import { Field, Input, Textarea, Select } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
+import { MediaPickerModal } from '@/components/media/MediaPickerModal';
 import type { Category, Post, PostStatus, PostType, Tag } from '@/lib/types';
 import { CAREER_CONTENT_TYPES } from '@/lib/types';
 import { listCategories } from '@/lib/services/categories';
@@ -36,6 +37,7 @@ export function PostForm({ post }: { post?: Post }) {
   const [allTags, setAllTags] = useState<Tag[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [saving, setSaving] = useState<'idle' | 'draft' | 'submit'>('idle');
+  const [pickerTarget, setPickerTarget] = useState<'cover' | 'og' | null>(null);
 
   const [values, setValues] = useState<PostFormValues>({
     title: post?.title || '',
@@ -171,6 +173,13 @@ export function PostForm({ post }: { post?: Post }) {
             </div>
             <Field label="OG Image URL">
               <Input value={values.ogImageUrl} onChange={(e) => set('ogImageUrl', e.target.value)} />
+              <button
+                type="button"
+                onClick={() => setPickerTarget('og')}
+                className="mt-1 flex items-center gap-1.5 text-[12px] font-medium text-brand-600 hover:text-brand-700"
+              >
+                <ImageIcon className="h-3.5 w-3.5" /> Select from Media Library
+              </button>
             </Field>
             <label className="flex items-center gap-2 text-[13px] text-slate-600">
               <input
@@ -264,7 +273,14 @@ export function PostForm({ post }: { post?: Post }) {
               value={values.coverImageUrl}
               onChange={(e) => set('coverImageUrl', e.target.value)}
             />
-            <p className="text-[11.5px] text-slate-400">Paste a URL, or upload in the Media Library and copy its link.</p>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full gap-2 text-xs"
+              onClick={() => setPickerTarget('cover')}
+            >
+              <ImageIcon className="h-3.5 w-3.5" /> Select from Media Library
+            </Button>
           </CardBody>
         </Card>
 
@@ -315,6 +331,16 @@ export function PostForm({ post }: { post?: Post }) {
           </CardBody>
         </Card>
       </div>
+
+      <MediaPickerModal
+        open={!!pickerTarget}
+        onClose={() => setPickerTarget(null)}
+        title={pickerTarget === 'og' ? 'Select OG Image from Media Library' : 'Select Cover Image from Media Library'}
+        onSelect={(url) => {
+          if (pickerTarget === 'cover') set('coverImageUrl', url);
+          if (pickerTarget === 'og') set('ogImageUrl', url);
+        }}
+      />
     </div>
   );
 }
