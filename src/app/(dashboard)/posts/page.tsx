@@ -44,6 +44,7 @@ import { Modal } from '@/components/ui/Modal';
 import { formatDateTime } from '@/lib/utils';
 import { apiErrorMessage } from '@/lib/api';
 import { useAuthStore } from '@/lib/auth-store';
+import { usePermissions } from '@/lib/permissions-store';
 
 const STATUS_OPTIONS: PostStatus[] = ['DRAFT', 'IN_REVIEW', 'SCHEDULED', 'PUBLISHED', 'ARCHIVED'];
 
@@ -62,6 +63,7 @@ const GENERAL_TYPES: PostType[] = ['ARTICLE', 'TUTORIAL', 'NEWS'];
 export default function PostsPage() {
   const role = useAuthStore((s) => s.user?.role);
   const canReview = role === 'EDITOR' || role === 'ADMIN' || role === 'SUPER_ADMIN';
+  const { can } = usePermissions();
   const searchParams = useSearchParams();
   const initialStatus = (searchParams.get('status') as PostStatus | null) || '';
 
@@ -265,11 +267,13 @@ export default function PostsPage() {
             </Button>
           )}
         </div>
-        <Link href="/posts/new">
-          <Button>
-            <Plus className="h-4 w-4" /> New Post
-          </Button>
-        </Link>
+        {can('posts', 'create') && (
+          <Link href="/posts/new">
+            <Button>
+              <Plus className="h-4 w-4" /> New Post
+            </Button>
+          </Link>
+        )}
       </div>
 
       <Card>
@@ -292,7 +296,9 @@ export default function PostsPage() {
                   },
                 ]
               : []),
-            { label: 'Delete', icon: Trash2, variant: 'danger' as const, onClick: () => handleBulk('delete'), loading: bulkBusy },
+            ...(can('posts', 'delete')
+              ? [{ label: 'Delete', icon: Trash2, variant: 'danger' as const, onClick: () => handleBulk('delete'), loading: bulkBusy }]
+              : []),
           ]}
         />
         {loading ? (
@@ -412,14 +418,18 @@ export default function PostsPage() {
                             </Button>
                           </>
                         )}
-                        <Link href={`/posts/${post.id}`}>
-                          <Button variant="outline" size="icon" title="Edit">
-                            <Pencil className="h-3.5 w-3.5" />
+                        {can('posts', 'update') && (
+                          <Link href={`/posts/${post.id}`}>
+                            <Button variant="outline" size="icon" title="Edit">
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                          </Link>
+                        )}
+                        {can('posts', 'delete') && (
+                          <Button variant="outline" size="icon" title="Delete" onClick={() => setToDelete(post)}>
+                            <Trash2 className="h-3.5 w-3.5 text-red-500" />
                           </Button>
-                        </Link>
-                        <Button variant="outline" size="icon" title="Delete" onClick={() => setToDelete(post)}>
-                          <Trash2 className="h-3.5 w-3.5 text-red-500" />
-                        </Button>
+                        )}
                       </div>
                     </Td>
                   </Tr>

@@ -24,6 +24,7 @@ const TITLES: Record<string, string> = {
   '/newsletter': 'Newsletter',
   '/analytics': 'Analytics',
   '/audit-log': 'Audit Log',
+  '/permissions': 'Permissions',
 };
 
 function resolveTitle(pathname: string) {

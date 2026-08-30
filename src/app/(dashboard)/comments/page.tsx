@@ -14,6 +14,7 @@ import { Pagination } from '@/components/ui/Pagination';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { formatDateTime, cn } from '@/lib/utils';
 import { apiErrorMessage } from '@/lib/api';
+import { usePermissions } from '@/lib/permissions-store';
 
 const TABS: { label: string; value: CommentStatus | '' }[] = [
   { label: 'Pending', value: 'PENDING' },
@@ -24,6 +25,7 @@ const TABS: { label: string; value: CommentStatus | '' }[] = [
 ];
 
 export default function CommentsPage() {
+  const { can } = usePermissions();
   const [tab, setTab] = useState<CommentStatus | ''>('PENDING');
   const [items, setItems] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -126,7 +128,7 @@ export default function CommentsPage() {
                       )}
                     </div>
                     <div className="flex shrink-0 gap-1.5">
-                      {c.status !== 'APPROVED' && (
+                      {can('comments', 'update') && c.status !== 'APPROVED' && (
                         <Button
                           variant="outline"
                           size="icon"
@@ -137,7 +139,7 @@ export default function CommentsPage() {
                           <Check className="h-3.5 w-3.5 text-emerald-600" />
                         </Button>
                       )}
-                      {c.status !== 'REJECTED' && (
+                      {can('comments', 'update') && c.status !== 'REJECTED' && (
                         <Button
                           variant="outline"
                           size="icon"
@@ -148,7 +150,7 @@ export default function CommentsPage() {
                           <X className="h-3.5 w-3.5 text-slate-500" />
                         </Button>
                       )}
-                      {c.status !== 'SPAM' && (
+                      {can('comments', 'update') && c.status !== 'SPAM' && (
                         <Button
                           variant="outline"
                           size="icon"
@@ -159,9 +161,11 @@ export default function CommentsPage() {
                           <ShieldAlert className="h-3.5 w-3.5 text-amber-600" />
                         </Button>
                       )}
-                      <Button variant="outline" size="icon" title="Delete" onClick={() => setToDelete(c)}>
-                        <Trash2 className="h-3.5 w-3.5 text-red-500" />
-                      </Button>
+                      {can('comments', 'delete') && (
+                        <Button variant="outline" size="icon" title="Delete" onClick={() => setToDelete(c)}>
+                          <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </li>

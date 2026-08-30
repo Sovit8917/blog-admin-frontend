@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { LogOut, ChevronDown, User as UserIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '@/lib/auth-store';
+import { usePermissionsStore } from '@/lib/permissions-store';
 import { logout as logoutRequest } from '@/lib/services/auth';
 import { initials } from '@/lib/utils';
 import { Badge } from '../ui/Badge';
@@ -25,6 +26,7 @@ export function Topbar({ title }: { title: string }) {
   async function handleLogout() {
     await logoutRequest();
     clear();
+    usePermissionsStore.getState().clear();
     toast.success('Signed out');
     router.replace('/login');
   }

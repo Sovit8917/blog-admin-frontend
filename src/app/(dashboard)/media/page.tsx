@@ -13,6 +13,7 @@ import { Pagination } from '@/components/ui/Pagination';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { formatBytes, formatDate, cn } from '@/lib/utils';
 import { apiErrorMessage } from '@/lib/api';
+import { usePermissions } from '@/lib/permissions-store';
 
 function TypeIcon({ type }: { type: MediaItem['type'] }) {
   if (type === 'VIDEO') return <Film className="h-6 w-6" />;
@@ -21,6 +22,7 @@ function TypeIcon({ type }: { type: MediaItem['type'] }) {
 }
 
 export default function MediaPage() {
+  const { can } = usePermissions();
   const [items, setItems] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -92,6 +94,7 @@ export default function MediaPage() {
 
   return (
     <div className="space-y-4">
+      {can('media', 'create') && (
       <div
         onDragOver={(e) => {
           e.preventDefault();
@@ -122,6 +125,7 @@ export default function MediaPage() {
         </p>
         <p className="text-[11.5px] text-slate-400">Images, documents, and video up to 15MB</p>
       </div>
+      )}
 
       <Card>
         {loading ? (
@@ -160,13 +164,15 @@ export default function MediaPage() {
                       >
                         <Copy className="h-3.5 w-3.5" />
                       </button>
-                      <button
-                        onClick={() => setToDelete(m)}
-                        className="rounded-lg bg-white/95 p-1.5 text-slate-600 shadow-soft hover:text-red-600"
-                        title="Delete"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                      {can('media', 'delete') && (
+                        <button
+                          onClick={() => setToDelete(m)}
+                          className="rounded-lg bg-white/95 p-1.5 text-slate-600 shadow-soft hover:text-red-600"
+                          title="Delete"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}

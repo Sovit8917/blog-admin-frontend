@@ -16,10 +16,12 @@ import { Modal } from '@/components/ui/Modal';
 import { Field, Input, Textarea, Select } from '@/components/ui/Input';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { apiErrorMessage } from '@/lib/api';
+import { usePermissions } from '@/lib/permissions-store';
 
 const emptyForm: CategoryFormValues = { name: '', description: '', parentId: '', isActive: true, order: 0 };
 
 export default function CategoriesPage() {
+  const { can } = usePermissions();
   const [items, setItems] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -107,9 +109,11 @@ export default function CategoriesPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-[13px] text-slate-500">{items.length} categories</p>
-        <Button onClick={openCreate}>
-          <Plus className="h-4 w-4" /> New Category
-        </Button>
+        {can('categories', 'create') && (
+          <Button onClick={openCreate}>
+            <Plus className="h-4 w-4" /> New Category
+          </Button>
+        )}
       </div>
 
       <Card>
@@ -121,9 +125,11 @@ export default function CategoriesPage() {
             title="No categories yet"
             description="Create your first category to start organizing posts."
             action={
-              <Button size="sm" className="mt-3" onClick={openCreate}>
-                <Plus className="h-3.5 w-3.5" /> New Category
-              </Button>
+              can('categories', 'create') ? (
+                <Button size="sm" className="mt-3" onClick={openCreate}>
+                  <Plus className="h-3.5 w-3.5" /> New Category
+                </Button>
+              ) : undefined
             }
           />
         ) : (
@@ -159,12 +165,16 @@ export default function CategoriesPage() {
                   </Td>
                   <Td>
                     <div className="flex justify-end gap-1.5">
-                      <Button variant="outline" size="icon" onClick={() => openEdit(c)}>
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button variant="outline" size="icon" onClick={() => setToDelete(c)}>
-                        <Trash2 className="h-3.5 w-3.5 text-red-500" />
-                      </Button>
+                      {can('categories', 'update') && (
+                        <Button variant="outline" size="icon" onClick={() => openEdit(c)}>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                      {can('categories', 'delete') && (
+                        <Button variant="outline" size="icon" onClick={() => setToDelete(c)}>
+                          <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                        </Button>
+                      )}
                     </div>
                   </Td>
                 </Tr>

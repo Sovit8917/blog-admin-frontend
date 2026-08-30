@@ -25,15 +25,21 @@ import {
   Code2,
   ClipboardList,
   Gauge,
+  ShieldCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/lib/auth-store';
+import { usePermissions } from '@/lib/permissions-store';
 
 interface NavItem {
   href: string;
   label: string;
   icon: typeof LayoutDashboard;
   roles: string[];
+  // Key into the Super-Admin permissions matrix (see lib/services/permissions.ts).
+  // Omit for pages the matrix doesn't govern (Dashboard, Users, Settings, …) —
+  // those stay controlled by `roles` alone, as before.
+  resource?: string;
 }
 
 interface NavGroup {
@@ -50,11 +56,11 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Content',
     items: [
-      { href: '/posts', label: 'Posts', icon: FileText, roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'AUTHOR'] },
-      { href: '/categories', label: 'Categories', icon: FolderTree, roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR'] },
-      { href: '/tags', label: 'Tags', icon: Tag, roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'AUTHOR'] },
-      { href: '/comments', label: 'Comments', icon: MessageSquare, roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR'] },
-      { href: '/media', label: 'Media Library', icon: ImageIcon, roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'AUTHOR'] },
+      { href: '/posts', label: 'Posts', icon: FileText, roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'AUTHOR'], resource: 'posts' },
+      { href: '/categories', label: 'Categories', icon: FolderTree, roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR'], resource: 'categories' },
+      { href: '/tags', label: 'Tags', icon: Tag, roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'AUTHOR'], resource: 'tags' },
+      { href: '/comments', label: 'Comments', icon: MessageSquare, roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR'], resource: 'comments' },
+      { href: '/media', label: 'Media Library', icon: ImageIcon, roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'AUTHOR'], resource: 'media' },
     ],
   },
   {
@@ -66,35 +72,37 @@ const NAV_GROUPS: NavGroup[] = [
         icon: Gauge,
         roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'AUTHOR'],
       },
-      { href: '/jobs', label: 'Jobs', icon: Briefcase, roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'AUTHOR'] },
+      { href: '/jobs', label: 'Jobs', icon: Briefcase, roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'AUTHOR'], resource: 'jobs' },
       {
         href: '/applications',
         label: 'Applications',
         icon: ClipboardList,
         roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR'],
+        resource: 'applications',
       },
-      { href: '/companies', label: 'Companies', icon: Building2, roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'AUTHOR'] },
-      { href: '/skills', label: 'Skills', icon: Sparkles, roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'AUTHOR'] },
+      { href: '/companies', label: 'Companies', icon: Building2, roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'AUTHOR'], resource: 'companies' },
+      { href: '/skills', label: 'Skills', icon: Sparkles, roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'AUTHOR'], resource: 'skills' },
       {
         href: '/developer-resources',
         label: 'Developer Resources',
         icon: Code2,
         roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'AUTHOR'],
+        resource: 'developer-resources',
       },
     ],
   },
   {
     label: 'Monetization',
     items: [
-      { href: '/ads', label: 'Ads', icon: Megaphone, roles: ['SUPER_ADMIN', 'ADMIN'] },
-      { href: '/affiliate-links', label: 'Affiliate Links', icon: Link2, roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR'] },
-      { href: '/sponsors', label: 'Sponsors', icon: Award, roles: ['SUPER_ADMIN', 'ADMIN'] },
+      { href: '/ads', label: 'Ads', icon: Megaphone, roles: ['SUPER_ADMIN', 'ADMIN'], resource: 'ads' },
+      { href: '/affiliate-links', label: 'Affiliate Links', icon: Link2, roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR'], resource: 'affiliate-links' },
+      { href: '/sponsors', label: 'Sponsors', icon: Award, roles: ['SUPER_ADMIN', 'ADMIN'], resource: 'sponsors' },
     ],
   },
   {
     label: 'Growth',
     items: [
-      { href: '/newsletter', label: 'Newsletter', icon: Mail, roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR'] },
+      { href: '/newsletter', label: 'Newsletter', icon: Mail, roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR'], resource: 'newsletter' },
       { href: '/analytics', label: 'Analytics', icon: BarChart3, roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR'] },
     ],
   },
@@ -109,6 +117,7 @@ const NAV_GROUPS: NavGroup[] = [
         roles: ['SUPER_ADMIN', 'ADMIN'],
       },
       { href: '/audit-log', label: 'Audit Log', icon: History, roles: ['SUPER_ADMIN', 'ADMIN'] },
+      { href: '/permissions', label: 'Permissions', icon: ShieldCheck, roles: ['SUPER_ADMIN'] },
       { href: '/settings', label: 'Settings', icon: Settings, roles: ['SUPER_ADMIN', 'ADMIN'] },
     ],
   },
@@ -117,6 +126,15 @@ const NAV_GROUPS: NavGroup[] = [
 export function Sidebar() {
   const pathname = usePathname();
   const role = useAuthStore((s) => s.user?.role);
+  const { can } = usePermissions();
+
+  // A page whose resource has `view` turned off for this role is hidden from
+  // the nav entirely — Super Admin's matrix controls page visibility directly
+  // via the 'view' permission, not just individual create/update/delete buttons.
+  function resourceVisible(resource?: string) {
+    if (!resource) return true;
+    return can(resource, 'view');
+  }
 
   return (
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-slate-200 bg-white lg:flex">
@@ -132,7 +150,9 @@ export function Sidebar() {
 
       <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-2">
         {NAV_GROUPS.map((group, gi) => {
-          const visibleItems = group.items.filter((item) => !role || item.roles.includes(role));
+          const visibleItems = group.items.filter(
+            (item) => (!role || item.roles.includes(role)) && (role === 'SUPER_ADMIN' || resourceVisible(item.resource)),
+          );
           if (visibleItems.length === 0) return null;
           return (
             <div key={gi} className="space-y-0.5">

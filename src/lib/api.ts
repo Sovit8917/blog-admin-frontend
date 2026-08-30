@@ -30,6 +30,7 @@ api.interceptors.response.use(
         window.location.href = '/login';
       }
     }
+
     return Promise.reject(error);
   },
 );
@@ -42,9 +43,14 @@ export function unwrap<T>(res: { data: any }): T {
 
 export function apiErrorMessage(err: unknown, fallback = 'Something went wrong'): string {
   if (axios.isAxiosError(err)) {
-    const msg = (err.response?.data as any)?.message;
+    const data = err.response?.data as any;
+    const msg = data?.message;
     if (Array.isArray(msg)) return msg.join(', ');
     if (typeof msg === 'string') return msg;
+    // No message body at all (network error, non-JSON 403 from a proxy,
+    // etc.) — still give a clear, permission-specific fallback rather than
+    // the generic one, since a bare 403 always means the same thing.
+    if (err.response?.status === 403) return "You don't have permission to do this";
   }
   // Better Auth calls (login, forgot/reset password, etc.) throw plain Errors.
   if (err instanceof Error && err.message) return err.message;

@@ -13,8 +13,10 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { PageSpinner } from '@/components/ui/Spinner';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { apiErrorMessage } from '@/lib/api';
+import { usePermissions } from '@/lib/permissions-store';
 
 export default function TagsPage() {
+  const { can } = usePermissions();
   const [items, setItems] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState('');
@@ -70,21 +72,23 @@ export default function TagsPage() {
 
   return (
     <div className="space-y-4">
-      <Card>
-        <CardBody>
-          <form onSubmit={handleCreate} className="flex gap-2">
-            <Input
-              placeholder="New tag name…"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="max-w-xs"
-            />
-            <Button type="submit" loading={creating}>
-              <Plus className="h-4 w-4" /> Add tag
-            </Button>
-          </form>
-        </CardBody>
-      </Card>
+      {can('tags', 'create') && (
+        <Card>
+          <CardBody>
+            <form onSubmit={handleCreate} className="flex gap-2">
+              <Input
+                placeholder="New tag name…"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="max-w-xs"
+              />
+              <Button type="submit" loading={creating}>
+                <Plus className="h-4 w-4" /> Add tag
+              </Button>
+            </form>
+          </CardBody>
+        </Card>
+      )}
 
       <Card>
         <CardBody>
@@ -100,9 +104,11 @@ export default function TagsPage() {
                   {typeof t._count?.posts === 'number' && (
                     <span className="text-blue-400">· {t._count.posts}</span>
                   )}
-                  <button onClick={() => setToDelete(t)} className="text-blue-400 hover:text-red-600">
-                    <Trash2 className="h-3 w-3" />
-                  </button>
+                  {can('tags', 'delete') && (
+                    <button onClick={() => setToDelete(t)} className="text-blue-400 hover:text-red-600">
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  )}
                 </Badge>
               ))}
             </div>
