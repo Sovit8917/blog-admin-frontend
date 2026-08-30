@@ -78,9 +78,13 @@ export interface Post {
   ogImageUrl?: string | null;
   canonicalUrl?: string | null;
   noIndex: boolean;
+  rejectionReason?: string | null;
+  reviewedById?: string | null;
+  reviewedAt?: string | null;
   createdAt: string;
   updatedAt: string;
   author?: { id: string; name: string; username: string; avatarUrl?: string | null };
+  reviewer?: { id: string; name: string; username: string } | null;
   category?: Category | null;
   tags?: { tag: Tag }[];
 }
@@ -197,6 +201,7 @@ export interface DashboardStats {
     total: number;
     published: number;
     draft: number;
+    pendingReview: number;
     byType: { postType: PostType; _count: number }[];
   };
   users: { total: number; new7d: number };
@@ -244,6 +249,29 @@ export interface RecommendationStats {
   topClickedPosts: { post: { id: string; title: string; slug: string; postType: PostType }; clicks: number }[];
 }
 
+export interface RevenueOverview {
+  ads: { active: number; impressions: number; clicks: number; ctr: number };
+  sponsors: { active: number; sponsoredPosts: number };
+  affiliate: { activeLinks: number; totalClicks: number };
+  jobs: { featured: number; openTotal: number };
+  newsletter: { confirmedSubscribers: number; upcomingSponsorSlots: number; sponsorSlotClicks: number };
+}
+
+export interface NewsletterSponsorSlot {
+  id: string;
+  sponsorId: string;
+  sponsor: { id: string; name: string; logoUrl: string | null };
+  headline: string;
+  body: string;
+  url: string;
+  issueDate: string;
+  isActive: boolean;
+  clicks: number;
+  impressions: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface PaginatedOffset<T> {
   items: T[];
   total: number;
@@ -259,7 +287,7 @@ export interface PaginatedOffset<T> {
 export type EmploymentType = 'FULL_TIME' | 'PART_TIME' | 'CONTRACT' | 'INTERNSHIP' | 'FREELANCE';
 export type RemoteType = 'REMOTE' | 'HYBRID' | 'ONSITE';
 export type ExperienceLevel = 'INTERNSHIP' | 'ENTRY_LEVEL' | 'MID_LEVEL' | 'SENIOR_LEVEL' | 'LEAD' | 'EXECUTIVE';
-export type JobStatus = 'DRAFT' | 'OPEN' | 'CLOSED' | 'EXPIRED';
+export type JobStatus = 'DRAFT' | 'PENDING_APPROVAL' | 'OPEN' | 'REJECTED' | 'CLOSED' | 'EXPIRED';
 export type ApplicationStatus = 'SUBMITTED' | 'REVIEWED' | 'SHORTLISTED' | 'REJECTED' | 'HIRED' | 'WITHDRAWN';
 export type AdPlacement = 'HEADER' | 'SIDEBAR' | 'IN_CONTENT' | 'FOOTER' | 'BETWEEN_POSTS' | 'POPUP';
 export type SponsorTier = 'PLATINUM' | 'GOLD' | 'SILVER' | 'BRONZE' | 'PARTNER';
@@ -332,6 +360,9 @@ export interface Job {
   noIndex: boolean;
   publishedAt?: string | null;
   expiresAt?: string | null;
+  rejectionReason?: string | null;
+  reviewedById?: string | null;
+  reviewedAt?: string | null;
   createdAt: string;
   updatedAt: string;
   company?: { id: string; name: string; slug: string; logoUrl?: string | null; isVerified: boolean };

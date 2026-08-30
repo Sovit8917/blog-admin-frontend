@@ -13,7 +13,9 @@ import { listCompanies } from '@/lib/services/companies';
 import { listSkills } from '@/lib/services/skills';
 import { createJob, updateJob, type JobFormValues } from '@/lib/services/jobs';
 import { apiErrorMessage } from '@/lib/api';
+import { useAuthStore } from '@/lib/auth-store';
 
+const ELEVATED_ROLES = ['ADMIN', 'SUPER_ADMIN', 'EDITOR'];
 const STATUS_OPTIONS: JobStatus[] = ['DRAFT', 'OPEN', 'CLOSED', 'EXPIRED'];
 const REMOTE_OPTIONS: RemoteType[] = ['REMOTE', 'HYBRID', 'ONSITE'];
 const EMPLOYMENT_OPTIONS: EmploymentType[] = ['FULL_TIME', 'PART_TIME', 'CONTRACT', 'INTERNSHIP', 'FREELANCE'];
@@ -22,6 +24,8 @@ const EXPERIENCE_OPTIONS: ExperienceLevel[] = ['INTERNSHIP', 'ENTRY_LEVEL', 'MID
 export function JobForm({ job }: { job?: Job }) {
   const router = useRouter();
   const isEdit = !!job;
+  const role = useAuthStore((s) => s.user?.role);
+  const isElevated = !!role && ELEVATED_ROLES.includes(role);
 
   const [companies, setCompanies] = useState<Company[]>([]);
   const [allSkills, setAllSkills] = useState<Skill[]>([]);
@@ -201,11 +205,27 @@ export function JobForm({ job }: { job?: Job }) {
         <Card>
           <CardHeader title="Publishing" />
           <CardBody className="space-y-4">
+            {job?.status === 'PENDING_APPROVAL' && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12.5px] text-amber-700">
+                Awaiting review by an editor or admin before it goes live.
+              </div>
+            )}
+            {job?.status === 'REJECTED' && (
+              <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[12.5px] text-red-700">
+                This listing was rejected{job.rejectionReason ? `: ${job.rejectionReason}` : '.'} Edit it and
+                resubmit for approval.
+              </div>
+            )}
+            {!isElevated && (
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[12.5px] text-slate-500">
+                As an author, publishing a job sends it to an editor for approval — it won't go live immediately.
+              </div>
+            )}
             <Field label="Status">
               <Select value={values.status} onChange={(e) => set('status', e.target.value as JobStatus)}>
                 {STATUS_OPTIONS.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
+                  <option key={s} value={s} disabled={s === 'OPEN' && !isElevated}>
+                    {s === 'OPEN' && !isElevated ? 'OPEN (requires approval)' : s}
                   </option>
                 ))}
               </Select>
@@ -224,7 +244,7 @@ export function JobForm({ job }: { job?: Job }) {
             </div>
             {!isEdit && (
               <Button variant="outline" className="w-full" onClick={() => persist('OPEN')} loading={saving}>
-                <Briefcase className="h-4 w-4" /> Create & publish
+                <Briefcase className="h-4 w-4" /> {isElevated ? 'Create & publish' : 'Create & submit for approval'}
               </Button>
             )}
           </CardBody>

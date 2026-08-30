@@ -16,6 +16,7 @@ import {
   AlarmClock,
   Flame,
   Eye,
+  Send,
 } from 'lucide-react';
 import { fetchDashboard } from '@/lib/services/dashboard';
 import type { DashboardStats, PostType } from '@/lib/types';
@@ -121,7 +122,16 @@ export default function DashboardPage() {
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <Link href="/posts?status=IN_REVIEW">
+          <StatCard
+            label="Pending Review"
+            value={stats.posts.pendingReview ?? 0}
+            sub="Posts awaiting editor approval"
+            icon={Send}
+            tone={stats.posts.pendingReview ? 'amber' : 'brand'}
+          />
+        </Link>
         <StatCard
           label="Career Content"
           value={careerCount}

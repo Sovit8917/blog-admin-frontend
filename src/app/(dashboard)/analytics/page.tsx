@@ -2,9 +2,24 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import toast from 'react-hot-toast';
-import { Eye, FileText, Users, Mail, Layers, Flame, Sparkles, MousePointerClick } from 'lucide-react';
-import { fetchAnalyticsOverview, fetchMostRead, fetchRecommendationStats } from '@/lib/services/analytics';
-import type { AnalyticsOverview, MostReadEntry, PostType, RecommendationStats } from '@/lib/types';
+import Link from 'next/link';
+import {
+  Eye,
+  FileText,
+  Users,
+  Mail,
+  Layers,
+  Flame,
+  Sparkles,
+  MousePointerClick,
+  Briefcase,
+  Megaphone,
+  Handshake,
+  Link2,
+  ArrowUpRight,
+} from 'lucide-react';
+import { fetchAnalyticsOverview, fetchMostRead, fetchRecommendationStats, fetchRevenueOverview } from '@/lib/services/analytics';
+import type { AnalyticsOverview, MostReadEntry, PostType, RecommendationStats, RevenueOverview } from '@/lib/types';
 import { CAREER_CONTENT_TYPES } from '@/lib/types';
 import { Card, CardBody } from '@/components/ui/Card';
 import { StatCard } from '@/components/ui/StatCard';
@@ -14,6 +29,7 @@ import { Badge } from '@/components/ui/Badge';
 import { PageSpinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { apiErrorMessage } from '@/lib/api';
+import { cn } from '@/lib/utils';
 
 const RANGE_OPTIONS = [
   { label: 'Last 7 days', value: 7 },
@@ -43,20 +59,23 @@ export default function AnalyticsPage() {
   const [data, setData] = useState<AnalyticsOverview | null>(null);
   const [mostRead, setMostRead] = useState<MostReadEntry[] | null>(null);
   const [recStats, setRecStats] = useState<RecommendationStats | null>(null);
+  const [revenue, setRevenue] = useState<RevenueOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [days, setDays] = useState(30);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [overview, top, rec] = await Promise.all([
+      const [overview, top, rec, rev] = await Promise.all([
         fetchAnalyticsOverview(days),
         fetchMostRead(days, 10),
         fetchRecommendationStats(days),
+        fetchRevenueOverview(),
       ]);
       setData(overview);
       setMostRead(top);
       setRecStats(rec);
+      setRevenue(rev);
     } catch (err) {
       toast.error(apiErrorMessage(err, 'Failed to load analytics'));
     } finally {
@@ -91,6 +110,81 @@ export default function AnalyticsPage() {
         <StatCard label="Total users" value={data?.totalUsers ?? 0} icon={Users} tone="violet" />
         <StatCard label="Confirmed subscribers" value={data?.totalSubscribers ?? 0} icon={Mail} tone="amber" />
       </div>
+
+      {/* MONETIZATION — quick jump into each revenue channel's own dashboard;
+          site analytics above answers "how's the content doing", this answers
+          "where's the money" without duplicating each page's own metrics. */}
+      <Card>
+        <CardBody>
+          <h3 className="mb-3 flex items-center gap-1.5 text-[13.5px] font-semibold text-slate-800">
+            <Handshake className="h-4 w-4 text-brand-600" /> Revenue channels
+          </h3>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[
+              {
+                href: '/employer-dashboard',
+                label: 'Featured jobs',
+                icon: Briefcase,
+                tone: 'brand',
+                stat: revenue ? `${revenue.jobs.featured}/${revenue.jobs.openTotal} open` : undefined,
+              },
+              {
+                href: '/sponsors',
+                label: 'Sponsors & sponsored content',
+                icon: Megaphone,
+                tone: 'amber',
+                stat: revenue ? `${revenue.sponsors.active} active · ${revenue.sponsors.sponsoredPosts} posts` : undefined,
+              },
+              {
+                href: '/affiliate-links',
+                label: 'Affiliate links',
+                icon: Link2,
+                tone: 'violet',
+                stat: revenue ? `${revenue.affiliate.activeLinks} links · ${revenue.affiliate.totalClicks} clicks` : undefined,
+              },
+              {
+                href: '/newsletter',
+                label: 'Newsletter sponsorship',
+                icon: Mail,
+                tone: 'brand',
+                stat: revenue ? `${revenue.newsletter.upcomingSponsorSlots} booked · ${revenue.newsletter.sponsorSlotClicks} clicks` : undefined,
+              },
+              {
+                href: '/ads',
+                label: 'Display ads',
+                icon: MousePointerClick,
+                tone: 'green',
+                stat: revenue ? `${revenue.ads.active} active · ${revenue.ads.ctr}% CTR` : undefined,
+              },
+            ].map(({ href, label, icon: Icon, tone, stat }) => (
+              <Link
+                key={href}
+                href={href}
+                className="group flex flex-col gap-2 rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-3 text-[12.5px] font-medium text-slate-700 transition hover:border-brand-200 hover:bg-brand-50"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="flex items-center gap-2">
+                    <span
+                      className={cn(
+                        'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg',
+                        tone === 'brand' && 'bg-brand-100 text-brand-600',
+                        tone === 'green' && 'bg-emerald-100 text-emerald-600',
+                        tone === 'amber' && 'bg-amber-100 text-amber-600',
+                        tone === 'violet' && 'bg-violet-100 text-violet-600',
+                      )}
+                    >
+                      <Icon className="h-3.5 w-3.5" />
+                    </span>
+                    {label}
+                  </span>
+                  <ArrowUpRight className="h-3.5 w-3.5 text-slate-300 transition group-hover:text-brand-500" />
+                </div>
+                {stat && <p className="pl-9 text-[11.5px] font-normal text-slate-500">{stat}</p>}
+              </Link>
+            ))}
+          </div>
+        </CardBody>
+      </Card>
 
       {typeof data?.pendingInBuffer === 'number' && data.pendingInBuffer > 0 && (
         <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-[12.5px] text-amber-700">

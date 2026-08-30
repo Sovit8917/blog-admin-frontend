@@ -19,6 +19,8 @@ export interface ListJobsParams {
   experienceLevel?: ExperienceLevel | '';
   location?: string;
   closingSoon?: boolean;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
 }
 
 export async function listJobs(params: ListJobsParams = {}) {
@@ -81,4 +83,28 @@ export async function updateJob(id: string, values: Partial<JobFormValues>) {
 export async function deleteJob(id: string) {
   const res = await api.delete(`/cms/jobs/${id}`);
   return unwrap<{ message: string }>(res);
+}
+
+export type JobBulkAction = 'publish' | 'close' | 'draft' | 'delete';
+
+export async function bulkJobAction(ids: string[], action: JobBulkAction) {
+  const res = await api.post('/cms/jobs/bulk', { ids, action });
+  return unwrap<{ updated: number }>(res);
+}
+
+// ---- Approval workflow ----
+
+export async function approveJob(id: string) {
+  const res = await api.patch(`/cms/jobs/${id}/approve`);
+  return unwrap<Job>(res);
+}
+
+export async function rejectJob(id: string, reason?: string) {
+  const res = await api.patch(`/cms/jobs/${id}/reject`, { reason });
+  return unwrap<Job>(res);
+}
+
+export async function getPendingApprovalCount() {
+  const res = await api.get('/cms/jobs/pending-approval-count');
+  return unwrap<number>(res);
 }

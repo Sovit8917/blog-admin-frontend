@@ -3,8 +3,30 @@
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
-import { Plus, Search, Briefcase, Pencil, Trash2, Star, Users, AlarmClock } from 'lucide-react';
-import { listJobs, deleteJob } from '@/lib/services/jobs';
+import {
+  Plus,
+  Search,
+  Briefcase,
+  Pencil,
+  Trash2,
+  Star,
+  Users,
+  AlarmClock,
+  CheckCircle2,
+  XCircle,
+  FileEdit,
+  ShieldCheck,
+  ShieldX,
+} from 'lucide-react';
+import {
+  listJobs,
+  deleteJob,
+  bulkJobAction,
+  approveJob,
+  rejectJob,
+  type JobBulkAction,
+} from '@/lib/services/jobs';
+import { RejectJobDialog } from '@/components/jobs/RejectJobDialog';
 import type { Job, JobStatus } from '@/lib/types';
 import { Card } from '@/components/ui/Card';
 import { Table, Thead, Th, Tr, Td } from '@/components/ui/Table';
@@ -15,11 +37,13 @@ import { Pagination } from '@/components/ui/Pagination';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { PageSpinner } from '@/components/ui/Spinner';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { Checkbox } from '@/components/ui/Checkbox';
+import { BulkActionBar } from '@/components/ui/BulkActionBar';
 import { JobApplicationsModal } from '@/components/jobs/JobApplicationsModal';
 import { formatDateTime } from '@/lib/utils';
 import { apiErrorMessage } from '@/lib/api';
 
-const STATUS_OPTIONS: JobStatus[] = ['DRAFT', 'OPEN', 'CLOSED', 'EXPIRED'];
+const STATUS_OPTIONS: JobStatus[] = ['DRAFT', 'PENDING_APPROVAL', 'OPEN', 'REJECTED', 'CLOSED', 'EXPIRED'];
 
 export default function JobsPage() {
   const [items, setItems] = useState<Job[]>([]);
@@ -30,9 +54,15 @@ export default function JobsPage() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<JobStatus | ''>('');
   const [closingSoon, setClosingSoon] = useState(false);
+  const [sortBy, setSortBy] = useState('updatedAt');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [toDelete, setToDelete] = useState<Job | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [applicantsFor, setApplicantsFor] = useState<Job | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [toReject, setToReject] = useState<Job | null>(null);
+  const [reviewBusyId, setReviewBusyId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -43,16 +73,19 @@ export default function JobsPage() {
         search: search || undefined,
         status: status || undefined,
         closingSoon: closingSoon || undefined,
+        sortBy,
+        sortOrder,
       });
       setItems(res.items);
       setTotal(res.total);
       setTotalPages(res.totalPages || Math.max(1, Math.ceil(res.total / res.limit)));
+      setSelected(new Set());
     } catch (err) {
       toast.error(apiErrorMessage(err, 'Failed to load jobs'));
     } finally {
       setLoading(false);
     }
-  }, [page, search, status, closingSoon]);
+  }, [page, search, status, closingSoon, sortBy, sortOrder]);
 
   useEffect(() => {
     load();
@@ -60,7 +93,28 @@ export default function JobsPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [search, status, closingSoon]);
+  }, [search, status, closingSoon, sortBy, sortOrder]);
+
+  function handleSort(key: string) {
+    if (sortBy === key) {
+      setSortOrder((o) => (o === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortBy(key);
+      setSortOrder('desc');
+    }
+  }
+
+  function toggleAll(checked: boolean) {
+    setSelected(checked ? new Set(items.map((i) => i.id)) : new Set());
+  }
+  function toggleOne(id: string, checked: boolean) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
 
   async function handleDelete() {
     if (!toDelete) return;
@@ -76,6 +130,50 @@ export default function JobsPage() {
       setDeleting(false);
     }
   }
+
+  async function handleApprove(job: Job) {
+    setReviewBusyId(job.id);
+    try {
+      await approveJob(job.id);
+      toast.success(`"${job.title}" approved and published`);
+      load();
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to approve job'));
+    } finally {
+      setReviewBusyId(null);
+    }
+  }
+
+  async function handleReject(reason?: string) {
+    if (!toReject) return;
+    setReviewBusyId(toReject.id);
+    try {
+      await rejectJob(toReject.id, reason);
+      toast.success(`"${toReject.title}" rejected`);
+      setToReject(null);
+      load();
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to reject job'));
+    } finally {
+      setReviewBusyId(null);
+    }
+  }
+
+  async function handleBulk(action: JobBulkAction) {
+    setBulkBusy(true);
+    try {
+      const res = await bulkJobAction([...selected], action);
+      toast.success(`Updated ${res.updated} job(s)`);
+      load();
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Bulk action failed'));
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
+  const activeSort = { sortBy, sortOrder };
+  const allSelected = items.length > 0 && items.every((i) => selected.has(i.id));
 
   return (
     <div className="space-y-4">
@@ -103,6 +201,16 @@ export default function JobsPage() {
           >
             <AlarmClock className="h-4 w-4" /> Closing soon
           </button>
+          <button
+            onClick={() => setStatus((s) => (s === 'PENDING_APPROVAL' ? '' : 'PENDING_APPROVAL'))}
+            className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-[13px] font-medium transition-colors ${
+              status === 'PENDING_APPROVAL'
+                ? 'border-amber-300 bg-amber-50 text-amber-700'
+                : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            <ShieldCheck className="h-4 w-4" /> Pending approval
+          </button>
         </div>
         <Link href="/jobs/new">
           <Button>
@@ -112,6 +220,16 @@ export default function JobsPage() {
       </div>
 
       <Card>
+        <BulkActionBar
+          count={selected.size}
+          onClear={() => setSelected(new Set())}
+          actions={[
+            { label: 'Publish', icon: CheckCircle2, onClick: () => handleBulk('publish'), loading: bulkBusy },
+            { label: 'Close', icon: XCircle, onClick: () => handleBulk('close'), loading: bulkBusy },
+            { label: 'Move to draft', icon: FileEdit, onClick: () => handleBulk('draft'), loading: bulkBusy },
+            { label: 'Delete', icon: Trash2, variant: 'danger', onClick: () => handleBulk('delete'), loading: bulkBusy },
+          ]}
+        />
         {loading ? (
           <PageSpinner label="Loading jobs…" />
         ) : items.length === 0 ? (
@@ -132,18 +250,38 @@ export default function JobsPage() {
             <Table>
               <Thead>
                 <tr>
-                  <Th>Title</Th>
+                  <Th className="w-10">
+                    <Checkbox checked={allSelected} onChange={toggleAll} ariaLabel="Select all" />
+                  </Th>
+                  <Th sortKey="title" activeSort={activeSort} onSort={handleSort}>
+                    Title
+                  </Th>
                   <Th>Company</Th>
-                  <Th>Status</Th>
-                  <Th>Applicants</Th>
-                  <Th>Expires</Th>
-                  <Th>Updated</Th>
+                  <Th sortKey="status" activeSort={activeSort} onSort={handleSort}>
+                    Status
+                  </Th>
+                  <Th sortKey="applicationCount" activeSort={activeSort} onSort={handleSort}>
+                    Applicants
+                  </Th>
+                  <Th sortKey="expiresAt" activeSort={activeSort} onSort={handleSort}>
+                    Expires
+                  </Th>
+                  <Th sortKey="updatedAt" activeSort={activeSort} onSort={handleSort}>
+                    Updated
+                  </Th>
                   <Th className="text-right">Actions</Th>
                 </tr>
               </Thead>
               <tbody>
                 {items.map((job) => (
                   <Tr key={job.id}>
+                    <Td>
+                      <Checkbox
+                        checked={selected.has(job.id)}
+                        onChange={(c) => toggleOne(job.id, c)}
+                        ariaLabel={`Select ${job.title}`}
+                      />
+                    </Td>
                     <Td className="max-w-xs">
                       <div className="flex items-center gap-2">
                         {job.isFeatured && <Star className="h-3.5 w-3.5 shrink-0 fill-amber-400 text-amber-400" />}
@@ -157,7 +295,12 @@ export default function JobsPage() {
                     </Td>
                     <Td>{job.company?.name || <span className="text-slate-300">—</span>}</Td>
                     <Td>
-                      <Badge tone={statusTone(job.status)}>{job.status}</Badge>
+                      <Badge tone={statusTone(job.status)}>{job.status.replace('_', ' ')}</Badge>
+                      {job.status === 'REJECTED' && job.rejectionReason && (
+                        <p className="mt-1 max-w-[180px] truncate text-[11px] text-slate-400" title={job.rejectionReason}>
+                          {job.rejectionReason}
+                        </p>
+                      )}
                     </Td>
                     <Td>
                       <button
@@ -187,6 +330,28 @@ export default function JobsPage() {
                     <Td>{formatDateTime(job.updatedAt)}</Td>
                     <Td>
                       <div className="flex justify-end gap-1.5">
+                        {job.status === 'PENDING_APPROVAL' && (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              title="Approve"
+                              disabled={reviewBusyId === job.id}
+                              onClick={() => handleApprove(job)}
+                            >
+                              <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              title="Reject"
+                              disabled={reviewBusyId === job.id}
+                              onClick={() => setToReject(job)}
+                            >
+                              <ShieldX className="h-3.5 w-3.5 text-red-500" />
+                            </Button>
+                          </>
+                        )}
                         <Link href={`/jobs/${job.id}`}>
                           <Button variant="outline" size="icon" title="Edit">
                             <Pencil className="h-3.5 w-3.5" />
@@ -223,6 +388,14 @@ export default function JobsPage() {
           onClose={() => setApplicantsFor(null)}
         />
       )}
+
+      <RejectJobDialog
+        open={!!toReject}
+        jobTitle={toReject?.title}
+        loading={reviewBusyId === toReject?.id}
+        onClose={() => setToReject(null)}
+        onConfirm={handleReject}
+      />
     </div>
   );
 }

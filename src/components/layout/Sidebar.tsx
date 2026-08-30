@@ -24,6 +24,7 @@ import {
   History,
   Code2,
   ClipboardList,
+  Gauge,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/lib/auth-store';
@@ -59,6 +60,12 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Job Board',
     items: [
+      {
+        href: '/employer-dashboard',
+        label: 'Employer Dashboard',
+        icon: Gauge,
+        roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'AUTHOR'],
+      },
       { href: '/jobs', label: 'Jobs', icon: Briefcase, roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'AUTHOR'] },
       {
         href: '/applications',
@@ -157,7 +164,9 @@ export function Sidebar() {
       </nav>
 
       <div className="border-t border-slate-100 px-4 py-3">
-        <p className="text-[11px] text-slate-400">Blog Admin Console · Phase 2</p>
+        <p className="text-[11px] text-slate-400">
+          Signed in as <span className="font-medium text-slate-500">{role ? role.replace('_', ' ').toLowerCase() : '—'}</span>
+        </p>
       </div>
     </aside>
   );

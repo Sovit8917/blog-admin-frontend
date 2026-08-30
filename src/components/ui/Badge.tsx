@@ -46,6 +46,7 @@ export function statusTone(status: string): Tone {
       return 'green';
     case 'DRAFT':
     case 'PENDING':
+    case 'PENDING_APPROVAL':
       return 'amber';
     case 'REJECTED':
     case 'SPAM':
