@@ -15,6 +15,8 @@ function toAuthUser(u: Record<string, unknown>): AuthUser {
     avatarUrl: (u.image as string | null) ?? null,
     bio: (u.bio as string | null) ?? null,
     isActive: (u.isActive as boolean) ?? true,
+    isEmailVerified: (u.emailVerified as boolean) ?? false,
+    createdAt: (u.createdAt as string) || new Date().toISOString(),
   };
 }
 
@@ -60,7 +62,7 @@ export async function changePassword(currentPassword: string, newPassword: strin
 }
 
 export async function forgotPassword(email: string) {
-  const { error } = await authClient.forgetPassword({ email, redirectTo: '/reset-password' });
+  const { error } = await (authClient as any).forgetPassword({ email, redirectTo: '/reset-password' });
   if (error) throw new Error(error.message || 'Something went wrong');
 }
 

@@ -17,7 +17,7 @@ export const authClient = createAuthClient({
   },
 });
 
-export const { useSession, signIn, signOut, forgetPassword, resetPassword, changePassword } = authClient;
+export const { useSession, signIn, signOut } = authClient as any;
 
 /** Shape of `session.user`, including the additionalFields declared on the backend. */
 export interface SessionUser {
