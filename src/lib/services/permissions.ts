@@ -2,6 +2,7 @@ import { api, unwrap } from '../api';
 import type { Role } from '../types';
 
 export const PERMISSION_RESOURCES = [
+  { key: 'dashboard', label: 'Dashboard' },
   { key: 'posts', label: 'Posts' },
   { key: 'categories', label: 'Categories' },
   { key: 'tags', label: 'Tags' },

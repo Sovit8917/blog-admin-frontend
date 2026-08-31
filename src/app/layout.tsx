@@ -3,8 +3,8 @@ import './globals.css';
 import { Toaster } from 'react-hot-toast';
 
 export const metadata: Metadata = {
-  title: 'Blog Admin',
-  description: 'Admin dashboard for the blog platform',
+  title: 'Devnexa Admin',
+  description: 'Admin dashboard for Devnexa',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import toast from 'react-hot-toast';
-import { MessageSquare, Check, X, ShieldAlert, Trash2 } from 'lucide-react';
-import { listCommentsForModeration, moderateComment, deleteComment } from '@/lib/services/comments';
+import { MessageSquare, Check, X, ShieldAlert, Trash2, Edit2 } from 'lucide-react';
+import { listCommentsForModeration, moderateComment, deleteComment, updateComment } from '@/lib/services/comments';
 import type { Comment, CommentStatus } from '@/lib/types';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -12,6 +12,8 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { PageSpinner } from '@/components/ui/Spinner';
 import { Pagination } from '@/components/ui/Pagination';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { Modal } from '@/components/ui/Modal';
+import { Textarea } from '@/components/ui/Input';
 import { formatDateTime, cn } from '@/lib/utils';
 import { apiErrorMessage } from '@/lib/api';
 import { usePermissions } from '@/lib/permissions-store';
@@ -34,6 +36,11 @@ export default function CommentsPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [toDelete, setToDelete] = useState<Comment | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Edit state
+  const [editingComment, setEditingComment] = useState<Comment | null>(null);
+  const [editContent, setEditContent] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -84,6 +91,27 @@ export default function CommentsPage() {
     }
   }
 
+  function openEdit(c: Comment) {
+    setEditingComment(c);
+    setEditContent(c.content);
+  }
+
+  async function handleSaveEdit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingComment || !editContent.trim()) return;
+    setSavingEdit(true);
+    try {
+      await updateComment(editingComment.id, editContent.trim());
+      toast.success('Comment updated');
+      setEditingComment(null);
+      load();
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to edit comment'));
+    } finally {
+      setSavingEdit(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex gap-1.5 rounded-xl border border-slate-200 bg-white p-1 shadow-soft w-fit">
@@ -128,6 +156,17 @@ export default function CommentsPage() {
                       )}
                     </div>
                     <div className="flex shrink-0 gap-1.5">
+                      {can('comments', 'update') && (
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          title="Edit content"
+                          disabled={busyId === c.id}
+                          onClick={() => openEdit(c)}
+                        >
+                          <Edit2 className="h-3.5 w-3.5 text-blue-600" />
+                        </Button>
+                      )}
                       {can('comments', 'update') && c.status !== 'APPROVED' && (
                         <Button
                           variant="outline"
@@ -176,6 +215,36 @@ export default function CommentsPage() {
         )}
       </Card>
 
+      {/* Edit Comment Modal */}
+      {editingComment && (
+        <Modal
+          open={!!editingComment}
+          onClose={() => setEditingComment(null)}
+          title="Edit Comment"
+        >
+          <form onSubmit={handleSaveEdit} className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-700">Comment Content</label>
+              <Textarea
+                rows={4}
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                placeholder="Edit comment text..."
+                required
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" type="button" onClick={() => setEditingComment(null)}>
+                Cancel
+              </Button>
+              <Button type="submit" loading={savingEdit} disabled={!editContent.trim()}>
+                Save changes
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
       <ConfirmDialog
         open={!!toDelete}
         onClose={() => setToDelete(null)}
@@ -187,3 +256,4 @@ export default function CommentsPage() {
     </div>
   );
 }
+

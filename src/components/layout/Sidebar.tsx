@@ -35,10 +35,16 @@ interface NavItem {
   href: string;
   label: string;
   icon: typeof LayoutDashboard;
+  // Ceiling role list — SUPER_ADMIN always included, plus whichever staff
+  // roles the app allows onto this page under ANY permission setting.
+  // For matrix-governed pages (resource is set) this should list every
+  // staff role the matrix could grant, so the Super-Admin's 'view' toggle
+  // is the thing that actually decides visibility — not this array. For
+  // pages the matrix doesn't govern (Users, Settings, Audit Log, …), this
+  // array is the real (and only) gate, as before.
   roles: string[];
   // Key into the Super-Admin permissions matrix (see lib/services/permissions.ts).
-  // Omit for pages the matrix doesn't govern (Dashboard, Users, Settings, …) —
-  // those stay controlled by `roles` alone, as before.
+  // Omit for pages the matrix doesn't govern.
   resource?: string;
 }
 
@@ -50,16 +56,16 @@ interface NavGroup {
 const NAV_GROUPS: NavGroup[] = [
   {
     items: [
-      { href: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'AUTHOR'] },
+      { href: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'AUTHOR'], resource: 'dashboard' },
     ],
   },
   {
     label: 'Content',
     items: [
       { href: '/posts', label: 'Posts', icon: FileText, roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'AUTHOR'], resource: 'posts' },
-      { href: '/categories', label: 'Categories', icon: FolderTree, roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR'], resource: 'categories' },
+      { href: '/categories', label: 'Categories', icon: FolderTree, roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'AUTHOR'], resource: 'categories' },
       { href: '/tags', label: 'Tags', icon: Tag, roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'AUTHOR'], resource: 'tags' },
-      { href: '/comments', label: 'Comments', icon: MessageSquare, roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR'], resource: 'comments' },
+      { href: '/comments', label: 'Comments', icon: MessageSquare, roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'AUTHOR'], resource: 'comments' },
       { href: '/media', label: 'Media Library', icon: ImageIcon, roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'AUTHOR'], resource: 'media' },
     ],
   },
@@ -77,7 +83,7 @@ const NAV_GROUPS: NavGroup[] = [
         href: '/applications',
         label: 'Applications',
         icon: ClipboardList,
-        roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR'],
+        roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'AUTHOR'],
         resource: 'applications',
       },
       { href: '/companies', label: 'Companies', icon: Building2, roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'AUTHOR'], resource: 'companies' },
@@ -94,15 +100,15 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Monetization',
     items: [
-      { href: '/ads', label: 'Ads', icon: Megaphone, roles: ['SUPER_ADMIN', 'ADMIN'], resource: 'ads' },
-      { href: '/affiliate-links', label: 'Affiliate Links', icon: Link2, roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR'], resource: 'affiliate-links' },
-      { href: '/sponsors', label: 'Sponsors', icon: Award, roles: ['SUPER_ADMIN', 'ADMIN'], resource: 'sponsors' },
+      { href: '/ads', label: 'Ads', icon: Megaphone, roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'AUTHOR'], resource: 'ads' },
+      { href: '/affiliate-links', label: 'Affiliate Links', icon: Link2, roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'AUTHOR'], resource: 'affiliate-links' },
+      { href: '/sponsors', label: 'Sponsors', icon: Award, roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'AUTHOR'], resource: 'sponsors' },
     ],
   },
   {
     label: 'Growth',
     items: [
-      { href: '/newsletter', label: 'Newsletter', icon: Mail, roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR'], resource: 'newsletter' },
+      { href: '/newsletter', label: 'Newsletter', icon: Mail, roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'AUTHOR'], resource: 'newsletter' },
       { href: '/analytics', label: 'Analytics', icon: BarChart3, roles: ['SUPER_ADMIN', 'ADMIN', 'EDITOR'] },
     ],
   },
@@ -143,7 +149,7 @@ export function Sidebar() {
           <BookOpenText className="h-4 w-4" />
         </div>
         <div>
-          <p className="text-[13.5px] font-semibold leading-tight text-slate-900">Blog Admin</p>
+          <p className="text-[13.5px] font-semibold leading-tight text-slate-900">Devnexa</p>
           <p className="text-[11px] leading-tight text-slate-400">Content Console</p>
         </div>
       </div>

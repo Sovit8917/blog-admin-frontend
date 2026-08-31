@@ -27,6 +27,9 @@ import { Badge, statusTone } from '@/components/ui/Badge';
 import { PageSpinner } from '@/components/ui/Spinner';
 import { formatDateTime } from '@/lib/utils';
 import { useAuthStore } from '@/lib/auth-store';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { apiErrorMessage } from '@/lib/api';
+import { ShieldOff } from 'lucide-react';
 
 const POST_TYPE_LABELS: Record<PostType, string> = {
   ARTICLE: 'Article',
@@ -46,15 +49,28 @@ function daysUntil(dateStr: string) {
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const user = useAuthStore((s) => s.user);
 
   useEffect(() => {
     fetchDashboard()
       .then(setStats)
+      .catch((err) => setError(apiErrorMessage(err, 'Failed to load the dashboard')))
       .finally(() => setLoading(false));
   }, []);
 
   if (loading) return <PageSpinner label="Loading dashboard…" />;
+
+  if (error) {
+    return (
+      <EmptyState
+        icon={ShieldOff}
+        title="Dashboard unavailable"
+        description={error}
+      />
+    );
+  }
+
   if (!stats) return null;
 
   const byTypeArray = Array.isArray(stats.posts?.byType)

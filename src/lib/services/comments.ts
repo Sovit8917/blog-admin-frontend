@@ -20,3 +20,9 @@ export async function deleteComment(id: string) {
   const res = await api.delete(`/comments/${id}`);
   return unwrap<{ message: string }>(res);
 }
+
+export async function updateComment(id: string, content: string) {
+  const res = await api.patch(`/cms/comments/${id}`, { content });
+  return unwrap<Comment>(res);
+}
+
