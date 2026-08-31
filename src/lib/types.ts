@@ -334,7 +334,10 @@ export interface Job {
   id: string;
   title: string;
   slug: string;
-  companyId: string;
+  companyId?: string | null;
+  companyName?: string | null;
+  companyLogoUrl?: string | null;
+  tags?: string[];
   description: string;
   responsibilities?: string | null;
   requirements?: string | null;
@@ -365,7 +368,7 @@ export interface Job {
   reviewedAt?: string | null;
   createdAt: string;
   updatedAt: string;
-  company?: { id: string; name: string; slug: string; logoUrl?: string | null; isVerified: boolean };
+  company?: { id: string; name: string; slug: string; logoUrl?: string | null; isVerified: boolean } | null;
   postedBy?: { id: string; username: string; name: string };
   skills?: { skill: Skill }[];
   _count?: { applications: number; savedBy: number };

@@ -58,7 +58,7 @@ function LoginForm() {
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-600 text-white shadow-soft">
             <BookOpenText className="h-6 w-6" />
           </div>
-          <h1 className="mt-4 text-[19px] font-semibold text-slate-900">Devnexa</h1>
+          <h1 className="mt-4 text-[19px] font-semibold text-slate-900">Blog Admin</h1>
           <p className="mt-1 text-[13px] text-slate-500">Sign in to manage your content</p>
         </div>
 

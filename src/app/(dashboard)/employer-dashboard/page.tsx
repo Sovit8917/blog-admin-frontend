@@ -142,7 +142,7 @@ export default function EmployerDashboardPage() {
               {data.topJobs.map((job) => (
                 <Tr key={job.id}>
                   <Td className="font-medium text-slate-800">{job.title}</Td>
-                  <Td>{job.company.name}</Td>
+                  <Td>{job.company?.name || job.companyName || '—'}</Td>
                   <Td>
                     <Badge tone={statusTone(job.status)}>{job.status}</Badge>
                   </Td>

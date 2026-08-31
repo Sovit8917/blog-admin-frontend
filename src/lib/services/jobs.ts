@@ -35,7 +35,10 @@ export async function getJob(id: string) {
 
 export interface JobFormValues {
   title: string;
-  companyId: string;
+  companyId?: string;
+  companyName?: string;
+  companyLogoUrl?: string;
+  tags?: string[];
   description: string;
   responsibilities?: string;
   requirements?: string;
@@ -67,6 +70,14 @@ function cleanPayload(values: Partial<JobFormValues>) {
   if (payload.salaryMax === undefined || Number.isNaN(payload.salaryMax)) delete payload.salaryMax;
   if (!payload.applyUrl) delete payload.applyUrl;
   if (!payload.expiresAt) delete payload.expiresAt;
+  if (payload.companyId) {
+    // Using an existing Company record — clear the manual fields so we don't
+    // send both a companyId and stale manual company data together.
+    delete payload.companyName;
+    delete payload.companyLogoUrl;
+  } else {
+    delete payload.companyId;
+  }
   return payload;
 }
 

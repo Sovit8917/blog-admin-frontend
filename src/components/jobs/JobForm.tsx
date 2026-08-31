@@ -3,11 +3,12 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { Save, X, Briefcase } from 'lucide-react';
+import { Save, X, Briefcase, Image as ImageIcon, Building2 } from 'lucide-react';
 import { Field, Input, Textarea, Select } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
+import { MediaPickerModal } from '@/components/media/MediaPickerModal';
 import type { Company, EmploymentType, ExperienceLevel, Job, JobStatus, RemoteType, Skill } from '@/lib/types';
 import { listCompanies } from '@/lib/services/companies';
 import { listSkills } from '@/lib/services/skills';
@@ -30,11 +31,22 @@ export function JobForm({ job }: { job?: Job }) {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [allSkills, setAllSkills] = useState<Skill[]>([]);
   const [skillInput, setSkillInput] = useState('');
+  const [tagInput, setTagInput] = useState('');
   const [saving, setSaving] = useState(false);
+  // Two ways to attach a company to a job: pick an existing Company record,
+  // or type the name (and optionally pick a logo image) manually — for jobs
+  // shared from other companies/boards that don't have a Company record here.
+  const [companyMode, setCompanyMode] = useState<'existing' | 'manual'>(
+    job?.companyName && !job?.companyId ? 'manual' : 'existing',
+  );
+  const [logoPickerOpen, setLogoPickerOpen] = useState(false);
 
   const [values, setValues] = useState<JobFormValues>({
     title: job?.title || '',
     companyId: job?.companyId || '',
+    companyName: job?.companyName || '',
+    companyLogoUrl: job?.companyLogoUrl || '',
+    tags: job?.tags || [],
     description: job?.description || '',
     responsibilities: job?.responsibilities || '',
     requirements: job?.requirements || '',
@@ -83,14 +95,40 @@ export function JobForm({ job }: { job?: Job }) {
     set('skills', (values.skills || []).filter((s) => s !== name));
   }
 
+  function addTag(name: string) {
+    const clean = name.trim();
+    if (!clean) return;
+    if (values.tags?.some((t) => t.toLowerCase() === clean.toLowerCase())) {
+      setTagInput('');
+      return;
+    }
+    set('tags', [...(values.tags || []), clean]);
+    setTagInput('');
+  }
+
+  function removeTag(name: string) {
+    set('tags', (values.tags || []).filter((t) => t !== name));
+  }
+
   async function persist(status?: JobStatus) {
-    if (!values.title.trim() || !values.companyId || !values.description.trim()) {
-      toast.error('Title, company and description are required');
+    const hasCompany = companyMode === 'existing' ? !!values.companyId : !!values.companyName?.trim();
+    if (!values.title.trim() || !hasCompany || !values.description.trim()) {
+      toast.error(
+        companyMode === 'existing'
+          ? 'Title, company and description are required'
+          : 'Title, company name and description are required',
+      );
       return;
     }
     setSaving(true);
     try {
-      const payload: Partial<JobFormValues> = { ...values, status: status || values.status };
+      const payload: Partial<JobFormValues> = {
+        ...values,
+        status: status || values.status,
+        ...(companyMode === 'existing'
+          ? { companyName: '', companyLogoUrl: '' }
+          : { companyId: '' }),
+      };
       if (isEdit) {
         await updateJob(job.id, payload);
         toast.success('Job updated');
@@ -118,14 +156,94 @@ export function JobForm({ job }: { job?: Job }) {
               <Input value={values.title} onChange={(e) => set('title', e.target.value)} placeholder="e.g. Senior Frontend Engineer" />
             </Field>
             <Field label="Company" required>
-              <Select value={values.companyId} onChange={(e) => set('companyId', e.target.value)}>
-                <option value="">Select a company…</option>
-                {companies.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
+              <div className="mb-2 inline-flex rounded-lg border border-slate-200 p-0.5 text-[12.5px] font-medium">
+                <button
+                  type="button"
+                  onClick={() => setCompanyMode('existing')}
+                  className={`rounded-md px-3 py-1.5 transition ${
+                    companyMode === 'existing' ? 'bg-slate-900 text-white' : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  Select existing company
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCompanyMode('manual')}
+                  className={`rounded-md px-3 py-1.5 transition ${
+                    companyMode === 'manual' ? 'bg-slate-900 text-white' : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  Type company manually
+                </button>
+              </div>
+
+              {companyMode === 'existing' ? (
+                <Select value={values.companyId} onChange={(e) => set('companyId', e.target.value)}>
+                  <option value="">Select a company…</option>
+                  {companies.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </Select>
+              ) : (
+                <div className="space-y-2 rounded-lg border border-slate-200 p-3">
+                  <p className="text-[12px] text-slate-500">
+                    Use this for external/off-platform companies — no Company record needed.
+                  </p>
+                  <Input
+                    value={values.companyName}
+                    onChange={(e) => set('companyName', e.target.value)}
+                    placeholder="e.g. Reliance Jio"
+                  />
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+                      {values.companyLogoUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={values.companyLogoUrl} alt="Company logo" className="h-full w-full object-cover" />
+                      ) : (
+                        <Building2 className="h-6 w-6 text-slate-300" />
+                      )}
+                    </div>
+                    <Button type="button" variant="outline" size="sm" onClick={() => setLogoPickerOpen(true)}>
+                      <ImageIcon className="h-4 w-4" /> {values.companyLogoUrl ? 'Change logo' : 'Add logo image'}
+                    </Button>
+                    {values.companyLogoUrl && (
+                      <button
+                        type="button"
+                        onClick={() => set('companyLogoUrl', '')}
+                        className="text-[12.5px] text-slate-400 hover:text-red-600"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </Field>
+            <Field label="Tags" hint="Shown as badges on the card, e.g. Freshers, Trainee, Walk-in — press Enter to add">
+              <div className="flex flex-wrap gap-1.5 rounded-lg border border-slate-300 p-2">
+                {values.tags?.map((t) => (
+                  <Badge key={t} tone="slate" className="gap-1.5">
+                    {t}
+                    <button onClick={() => removeTag(t)} className="text-slate-400 hover:text-red-600">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
                 ))}
-              </Select>
+                <input
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ',') {
+                      e.preventDefault();
+                      addTag(tagInput);
+                    }
+                  }}
+                  placeholder="Add a tag…"
+                  className="min-w-[120px] flex-1 border-none bg-transparent text-sm outline-none"
+                />
+              </div>
             </Field>
             <Field label="Description" required>
               <Textarea rows={6} value={values.description} onChange={(e) => set('description', e.target.value)} />
@@ -323,6 +441,13 @@ export function JobForm({ job }: { job?: Job }) {
           </CardBody>
         </Card>
       </div>
+
+      <MediaPickerModal
+        open={logoPickerOpen}
+        onClose={() => setLogoPickerOpen(false)}
+        title="Select Company Logo from Media Library"
+        onSelect={(url) => set('companyLogoUrl', url)}
+      />
     </div>
   );
 }

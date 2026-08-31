@@ -21,7 +21,8 @@ export interface EmployerDashboard {
     status: JobStatus;
     viewCount: number;
     applicationCount: number;
-    company: { name: string; slug: string };
+    company?: { name: string; slug: string } | null;
+    companyName?: string | null;
   }[];
   recentApplications: {
     id: string;
