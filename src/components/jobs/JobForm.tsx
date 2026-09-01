@@ -47,6 +47,10 @@ export function JobForm({ job }: { job?: Job }) {
     companyId: job?.companyId || '',
     companyName: job?.companyName || '',
     companyLogoUrl: job?.companyLogoUrl || '',
+    role: job?.role || '',
+    category: job?.category || '',
+    externalJobId: job?.externalJobId || '',
+    additionalDetails: job?.additionalDetails || [],
     images: job?.images || [],
     tags: job?.tags || [],
     description: job?.description || '',
@@ -110,6 +114,24 @@ export function JobForm({ job }: { job?: Job }) {
 
   function removeTag(name: string) {
     set('tags', (values.tags || []).filter((t) => t !== name));
+  }
+
+  // ---- Additional Job Details rows (jobcode.in-style table: Database
+  // Skills, Version Control, Additional Skill, Frontend Knowledge, etc.) ----
+  const [detailLabel, setDetailLabel] = useState('');
+  const [detailValue, setDetailValue] = useState('');
+
+  function addDetail() {
+    const label = detailLabel.trim();
+    const value = detailValue.trim();
+    if (!label || !value) return;
+    set('additionalDetails', [...(values.additionalDetails || []), { label, value }]);
+    setDetailLabel('');
+    setDetailValue('');
+  }
+
+  function removeDetail(index: number) {
+    set('additionalDetails', (values.additionalDetails || []).filter((_, i) => i !== index));
   }
 
   async function persist(status?: JobStatus) {
@@ -437,6 +459,60 @@ export function JobForm({ job }: { job?: Job }) {
                   </option>
                 ))}
               </Select>
+            </Field>
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardHeader
+            title="Job Details table"
+            description="Powers the jobcode.in-style Job Details / Information table on the public job page. Role, Category and Job ID get their own columns; anything else (Database Skills, Version Control, Primary Skill, Frontend Knowledge…) goes in the rows below."
+          />
+          <CardBody className="space-y-4">
+            <Field label="Role" hint='Employer-facing role label, e.g. "Python Developer" — shown even if it differs from the job title above'>
+              <Input value={values.role} onChange={(e) => set('role', e.target.value)} placeholder="e.g. Python Developer" />
+            </Field>
+            <Field label="Category" hint='e.g. "Product Engineering & Data Science"'>
+              <Input value={values.category} onChange={(e) => set('category', e.target.value)} placeholder="e.g. Product Engineering & Data Science" />
+            </Field>
+            <Field label="Job ID" hint="The employer's own req/job ID, if they publish one">
+              <Input value={values.externalJobId} onChange={(e) => set('externalJobId', e.target.value)} placeholder="e.g. R15418" />
+            </Field>
+
+            <Field label="Additional rows" hint="Any other Job Details row you want shown, in order — e.g. Database Skills / MySQL, Oracle">
+              <div className="space-y-2">
+                {(values.additionalDetails || []).map((d, i) => (
+                  <div key={i} className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2">
+                    <span className="w-1/3 shrink-0 truncate text-[13px] font-medium text-slate-700">{d.label}</span>
+                    <span className="flex-1 truncate text-[13px] text-slate-500">{d.value}</span>
+                    <button type="button" onClick={() => removeDetail(i)} className="text-slate-400 hover:text-red-600">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={detailLabel}
+                    onChange={(e) => setDetailLabel(e.target.value)}
+                    placeholder="Label, e.g. Database Skills"
+                    className="w-1/3"
+                  />
+                  <Input
+                    value={detailValue}
+                    onChange={(e) => setDetailValue(e.target.value)}
+                    placeholder="Value, e.g. MySQL, Oracle"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addDetail();
+                      }
+                    }}
+                  />
+                  <Button type="button" variant="outline" size="sm" onClick={addDetail}>
+                    Add
+                  </Button>
+                </div>
+              </div>
             </Field>
           </CardBody>
         </Card>

@@ -337,6 +337,10 @@ export interface Job {
   companyId?: string | null;
   companyName?: string | null;
   companyLogoUrl?: string | null;
+  role?: string | null;
+  category?: string | null;
+  externalJobId?: string | null;
+  additionalDetails?: { label: string; value: string }[];
   images?: string[];
   tags?: string[];
   description: string;
