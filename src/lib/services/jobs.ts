@@ -38,6 +38,7 @@ export interface JobFormValues {
   companyId?: string;
   companyName?: string;
   companyLogoUrl?: string;
+  images?: string[];
   tags?: string[];
   description: string;
   responsibilities?: string;

@@ -40,12 +40,14 @@ export function JobForm({ job }: { job?: Job }) {
     job?.companyName && !job?.companyId ? 'manual' : 'existing',
   );
   const [logoPickerOpen, setLogoPickerOpen] = useState(false);
+  const [galleryPickerOpen, setGalleryPickerOpen] = useState(false);
 
   const [values, setValues] = useState<JobFormValues>({
     title: job?.title || '',
     companyId: job?.companyId || '',
     companyName: job?.companyName || '',
     companyLogoUrl: job?.companyLogoUrl || '',
+    images: job?.images || [],
     tags: job?.tags || [],
     description: job?.description || '',
     responsibilities: job?.responsibilities || '',
@@ -243,6 +245,40 @@ export function JobForm({ job }: { job?: Job }) {
                   placeholder="Add a tag…"
                   className="min-w-[120px] flex-1 border-none bg-transparent text-sm outline-none"
                 />
+              </div>
+            </Field>
+            <Field
+              label="Photos"
+              hint="Office/team photos or a banner shown on the listing card and job page. The first photo also becomes the preview image when the job link is shared, unless an SEO image is set below."
+            >
+              <div className="flex flex-wrap gap-3">
+                {(values.images || []).map((url, i) => (
+                  <div key={url + i} className="group relative h-20 w-32 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={url} alt={`Job photo ${i + 1}`} className="h-full w-full object-cover" />
+                    {i === 0 && (
+                      <span className="absolute left-1 top-1 rounded bg-slate-900/80 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                        Cover
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => set('images', (values.images || []).filter((_, idx) => idx !== i))}
+                      className="absolute right-1 top-1 rounded-full bg-slate-900/70 p-1 text-white opacity-0 transition group-hover:opacity-100"
+                      aria-label="Remove photo"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setGalleryPickerOpen(true)}
+                  className="flex h-20 w-32 shrink-0 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-slate-300 text-slate-400 hover:border-slate-400 hover:text-slate-600"
+                >
+                  <ImageIcon className="h-5 w-5" />
+                  <span className="text-[11px] font-medium">Add photo</span>
+                </button>
               </div>
             </Field>
             <Field label="Description" required>
@@ -447,6 +483,15 @@ export function JobForm({ job }: { job?: Job }) {
         onClose={() => setLogoPickerOpen(false)}
         title="Select Company Logo from Media Library"
         onSelect={(url) => set('companyLogoUrl', url)}
+      />
+      <MediaPickerModal
+        open={galleryPickerOpen}
+        onClose={() => setGalleryPickerOpen(false)}
+        title="Add a Job Photo"
+        onSelect={(url) => {
+          set('images', [...(values.images || []), url]);
+          setGalleryPickerOpen(false);
+        }}
       />
     </div>
   );

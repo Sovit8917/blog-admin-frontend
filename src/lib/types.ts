@@ -337,6 +337,7 @@ export interface Job {
   companyId?: string | null;
   companyName?: string | null;
   companyLogoUrl?: string | null;
+  images?: string[];
   tags?: string[];
   description: string;
   responsibilities?: string | null;
