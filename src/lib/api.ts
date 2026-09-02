@@ -2,7 +2,7 @@
 
 import axios, { type AxiosError } from 'axios';
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
 // Root origin of the backend (no `/api/v1` prefix) — Better Auth's own
 // routes live at `${API_ORIGIN}/auth/*`, alongside but outside the REST API.
 export const API_ORIGIN = API_BASE_URL.replace(/\/api\/v\d+\/?$/, '').replace(/\/+$/, '');
