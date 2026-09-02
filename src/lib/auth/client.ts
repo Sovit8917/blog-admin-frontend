@@ -1,17 +1,33 @@
 import { createAuthClient } from 'better-auth/react';
-import { API_ORIGIN } from '@/lib/api';
 
 // The admin console talks to its OWN Better Auth instance, mounted at
 // `/admin-auth/*` — separate from the `/auth/*` instance the public site
-// uses. This is deliberate: the two instances issue differently-named
-// session cookies (`admin_session` vs Better Auth's default), so signing
-// in here never overwrites/ends a reader session on the public site in
-// the same browser, and vice versa. See the backend's
-// src/auth/better-auth.ts for the full rationale. Both instances share
-// the same underlying accounts — this only affects which cookie a
-// browser holds, not who's allowed to have one.
+// uses.
+//
+// The two instances issue differently-named session cookies
+// (`admin_session` vs Better Auth's default), so signing in here does not
+// overwrite/end a reader session on the public site in the same browser.
+
+const getBaseURL = () => {
+  // Browser:
+  // Use the frontend's own origin so requests stay same-origin.
+  if (typeof window !== 'undefined') {
+    return `${window.location.origin}/admin-auth`;
+  }
+
+  // Server / SSR / Vercel build:
+  // window does not exist, so use the actual backend URL.
+  const backendURL = process.env.BACKEND_URL;
+
+  if (!backendURL) {
+    throw new Error('BACKEND_URL is not configured');
+  }
+
+  return `${backendURL.replace(/\/$/, '')}/admin-auth`;
+};
+
 export const authClient = createAuthClient({
-  baseURL: `${API_ORIGIN}/admin-auth`,
+  baseURL: getBaseURL(),
   fetchOptions: {
     credentials: 'include',
   },
