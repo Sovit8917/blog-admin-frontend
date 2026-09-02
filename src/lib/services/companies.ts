@@ -1,5 +1,5 @@
 import { api, unwrap } from '../api';
-import type { Company, PaginatedOffset } from '../types';
+import type { Company } from '../types';
 
 export interface ListCompaniesParams {
   page?: number;
@@ -7,9 +7,17 @@ export interface ListCompaniesParams {
   search?: string;
 }
 
+export interface CompaniesPage {
+  items: Company[];
+  meta: { page: number; limit: number; total: number; totalPages: number };
+}
+
+// Backend returns { items, meta: { page, limit, total, totalPages } } (see
+// CompaniesService.findAll / offsetMeta) — not flattened, so this must NOT
+// be typed as PaginatedOffset<T>.
 export async function listCompanies(params: ListCompaniesParams = {}) {
   const res = await api.get('/companies', { params });
-  return unwrap<PaginatedOffset<Company>>(res);
+  return unwrap<CompaniesPage>(res);
 }
 
 export interface CompanyFormValues {

@@ -33,8 +33,8 @@ export default function ApplicationsPage() {
     try {
       const res = await listApplications({ page, limit: 15, search: search || undefined, status: status || undefined });
       setItems(res.items);
-      setTotal(res.total);
-      setTotalPages(res.totalPages || Math.max(1, Math.ceil(res.total / res.limit)));
+      setTotal(res.meta.total);
+      setTotalPages(res.meta.totalPages);
     } catch (err) {
       toast.error(apiErrorMessage(err, 'Failed to load applications'));
     } finally {

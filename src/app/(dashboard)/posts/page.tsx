@@ -98,8 +98,8 @@ export default function PostsPage() {
         sortOrder,
       });
       setItems(res.items);
-      setTotal(res.total);
-      setTotalPages(res.totalPages || Math.max(1, Math.ceil(res.total / res.limit)));
+      setTotal(res.meta.total);
+      setTotalPages(res.meta.totalPages);
       setSelected(new Set());
     } catch (err) {
       toast.error(apiErrorMessage(err, 'Failed to load posts'));

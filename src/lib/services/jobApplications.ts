@@ -1,5 +1,5 @@
 import { api, unwrap } from '../api';
-import type { ApplicationStatus, JobApplication, PaginatedOffset } from '../types';
+import type { ApplicationStatus, JobApplication } from '../types';
 
 export async function listApplicationsForJob(jobId: string) {
   const res = await api.get(`/cms/jobs/${jobId}/applications`);
@@ -14,9 +14,17 @@ export interface ListApplicationsParams {
   jobId?: string;
 }
 
+export interface ApplicationsPage {
+  items: JobApplication[];
+  meta: { page: number; limit: number; total: number; totalPages: number };
+}
+
+// Backend returns { items, meta: { page, limit, total, totalPages } } (see
+// JobApplicationsService / offsetMeta) — not flattened, so this must NOT be
+// typed as PaginatedOffset<T>.
 export async function listApplications(params: ListApplicationsParams = {}) {
   const res = await api.get('/cms/applications', { params });
-  return unwrap<PaginatedOffset<JobApplication>>(res);
+  return unwrap<ApplicationsPage>(res);
 }
 
 export async function updateApplicationStatus(id: string, status: ApplicationStatus) {

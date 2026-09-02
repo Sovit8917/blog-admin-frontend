@@ -4,7 +4,6 @@ import type {
   ExperienceLevel,
   Job,
   JobStatus,
-  PaginatedOffset,
   RemoteType,
 } from '../types';
 
@@ -19,13 +18,22 @@ export interface ListJobsParams {
   experienceLevel?: ExperienceLevel | '';
   location?: string;
   closingSoon?: boolean;
+  verificationStatus?: 'UNVERIFIED' | 'VERIFIED' | 'FLAGGED' | '';
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
 }
 
+export interface JobsPage {
+  items: Job[];
+  meta: { page: number; limit: number; total: number; totalPages: number };
+}
+
+// Backend returns { items, meta: { page, limit, total, totalPages } } (see
+// JobsService.findAllForManagement / offsetMeta) — not flattened, so this
+// must NOT be typed as PaginatedOffset<T>.
 export async function listJobs(params: ListJobsParams = {}) {
   const res = await api.get('/cms/jobs', { params });
-  return unwrap<PaginatedOffset<Job>>(res);
+  return unwrap<JobsPage>(res);
 }
 
 export async function getJob(id: string) {
@@ -123,4 +131,42 @@ export async function rejectJob(id: string, reason?: string) {
 export async function getPendingApprovalCount() {
   const res = await api.get('/cms/jobs/pending-approval-count');
   return unwrap<number>(res);
+}
+
+// ---- Job quality/verification (P0) ----
+
+export async function verifyJob(id: string) {
+  const res = await api.patch(`/cms/jobs/${id}/verify`);
+  return unwrap<Job>(res);
+}
+
+export async function unverifyJob(id: string) {
+  const res = await api.patch(`/cms/jobs/${id}/unverify`);
+  return unwrap<Job>(res);
+}
+
+export async function flagJob(id: string) {
+  const res = await api.patch(`/cms/jobs/${id}/flag`);
+  return unwrap<Job>(res);
+}
+
+export interface JobReport {
+  id: string;
+  jobId: string;
+  reason: string;
+  note?: string | null;
+  status: 'OPEN' | 'REVIEWED' | 'DISMISSED';
+  createdAt: string;
+  job: { id: string; title: string; slug: string; verificationStatus: string; status: JobStatus };
+  reporter?: { id: string; username: string; name: string } | null;
+}
+
+export async function listJobReports(status?: 'OPEN' | 'REVIEWED' | 'DISMISSED') {
+  const res = await api.get('/cms/jobs/reports', { params: status ? { status } : {} });
+  return unwrap<JobReport[]>(res);
+}
+
+export async function reviewJobReport(id: string, status: 'REVIEWED' | 'DISMISSED') {
+  const res = await api.patch(`/cms/jobs/reports/${id}`, { status });
+  return unwrap<JobReport>(res);
 }

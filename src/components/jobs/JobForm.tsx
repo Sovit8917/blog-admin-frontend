@@ -41,6 +41,13 @@ export function JobForm({ job }: { job?: Job }) {
   );
   const [logoPickerOpen, setLogoPickerOpen] = useState(false);
   const [galleryPickerOpen, setGalleryPickerOpen] = useState(false);
+  // External image URL entry (P1 "add external image url in job") — an
+  // alternative to picking from the media library, for logos/photos that
+  // live on the employer's own site or CDN rather than our uploads bucket.
+  const [logoUrlOpen, setLogoUrlOpen] = useState(false);
+  const [logoUrlInput, setLogoUrlInput] = useState('');
+  const [photoUrlOpen, setPhotoUrlOpen] = useState(false);
+  const [photoUrlInput, setPhotoUrlInput] = useState('');
 
   const [values, setValues] = useState<JobFormValues>({
     title: job?.title || '',
@@ -232,6 +239,13 @@ export function JobForm({ job }: { job?: Job }) {
                     <Button type="button" variant="outline" size="sm" onClick={() => setLogoPickerOpen(true)}>
                       <ImageIcon className="h-4 w-4" /> {values.companyLogoUrl ? 'Change logo' : 'Add logo image'}
                     </Button>
+                    <button
+                      type="button"
+                      onClick={() => setLogoUrlOpen((v) => !v)}
+                      className="text-[12.5px] font-medium text-slate-500 hover:text-slate-800"
+                    >
+                      or paste URL
+                    </button>
                     {values.companyLogoUrl && (
                       <button
                         type="button"
@@ -242,6 +256,38 @@ export function JobForm({ job }: { job?: Job }) {
                       </button>
                     )}
                   </div>
+                  {logoUrlOpen && (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={logoUrlInput}
+                        onChange={(e) => setLogoUrlInput(e.target.value)}
+                        placeholder="https://example.com/logo.png"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            if (logoUrlInput.trim()) {
+                              set('companyLogoUrl', logoUrlInput.trim());
+                              setLogoUrlInput('');
+                              setLogoUrlOpen(false);
+                            }
+                          }
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          if (!logoUrlInput.trim()) return;
+                          set('companyLogoUrl', logoUrlInput.trim());
+                          setLogoUrlInput('');
+                          setLogoUrlOpen(false);
+                        }}
+                      >
+                        Use URL
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
             </Field>
@@ -301,7 +347,46 @@ export function JobForm({ job }: { job?: Job }) {
                   <ImageIcon className="h-5 w-5" />
                   <span className="text-[11px] font-medium">Add photo</span>
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setPhotoUrlOpen((v) => !v)}
+                  className="flex h-20 w-32 shrink-0 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-slate-300 text-slate-400 hover:border-slate-400 hover:text-slate-600"
+                >
+                  <span className="text-[11px] font-medium">Paste URL</span>
+                </button>
               </div>
+              {photoUrlOpen && (
+                <div className="mt-2 flex items-center gap-2">
+                  <Input
+                    value={photoUrlInput}
+                    onChange={(e) => setPhotoUrlInput(e.target.value)}
+                    placeholder="https://example.com/photo.jpg"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const url = photoUrlInput.trim();
+                        if (url) {
+                          set('images', [...(values.images || []), url]);
+                          setPhotoUrlInput('');
+                        }
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const url = photoUrlInput.trim();
+                      if (!url) return;
+                      set('images', [...(values.images || []), url]);
+                      setPhotoUrlInput('');
+                    }}
+                  >
+                    Add
+                  </Button>
+                </div>
+              )}
             </Field>
             <Field label="Description" required>
               <Textarea rows={6} value={values.description} onChange={(e) => set('description', e.target.value)} />

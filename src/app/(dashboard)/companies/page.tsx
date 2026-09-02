@@ -39,8 +39,8 @@ export default function CompaniesPage() {
     try {
       const res = await listCompanies({ page, limit: 12, search: search || undefined });
       setItems(res.items);
-      setTotal(res.total);
-      setTotalPages(res.totalPages || Math.max(1, Math.ceil(res.total / res.limit)));
+      setTotal(res.meta.total);
+      setTotalPages(res.meta.totalPages);
     } catch (err) {
       toast.error(apiErrorMessage(err, 'Failed to load companies'));
     } finally {

@@ -1,5 +1,5 @@
 import { api, unwrap } from '../api';
-import type { Post, PostStatus, PostType, PaginatedOffset } from '../types';
+import type { Post, PostStatus, PostType } from '../types';
 
 export interface ListPostsParams {
   page?: number;
@@ -13,9 +13,17 @@ export interface ListPostsParams {
   sortOrder?: 'asc' | 'desc';
 }
 
+export interface PostsPage {
+  items: Post[];
+  meta: { page: number; limit: number; total: number; totalPages: number };
+}
+
+// Backend returns { items, meta: { page, limit, total, totalPages } } (see
+// PostsService.findAllForManagement / offsetMeta) — not flattened, so this
+// must NOT be typed as PaginatedOffset<T>.
 export async function listPosts(params: ListPostsParams) {
   const res = await api.get('/cms/posts', { params });
-  return unwrap<PaginatedOffset<Post>>(res);
+  return unwrap<PostsPage>(res);
 }
 
 export async function getPost(id: string) {
@@ -40,6 +48,8 @@ export interface PostFormValues {
   ogImageUrl?: string;
   canonicalUrl?: string;
   noIndex?: boolean;
+  /** Article -> Job linking (P1) — job ids the editor hand-picked for this article. */
+  jobIds?: string[];
 }
 
 export async function createPost(values: PostFormValues) {

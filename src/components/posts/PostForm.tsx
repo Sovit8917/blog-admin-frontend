@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { MediaPickerModal } from '@/components/media/MediaPickerModal';
+import { JobLinkPicker } from '@/components/jobs/JobLinkPicker';
 import type { Category, Post, PostStatus, PostType, Tag } from '@/lib/types';
 import { CAREER_CONTENT_TYPES } from '@/lib/types';
 import { listCategories } from '@/lib/services/categories';
@@ -56,6 +57,7 @@ export function PostForm({ post }: { post?: Post }) {
     ogImageUrl: post?.ogImageUrl || '',
     canonicalUrl: post?.canonicalUrl || '',
     noIndex: post?.noIndex || false,
+    jobIds: post?.linkedJobs?.map((j) => j.id) || [],
   });
 
   useEffect(() => {
@@ -328,6 +330,20 @@ export function PostForm({ post }: { post?: Post }) {
                 <option key={t.id} value={t.name} />
               ))}
             </datalist>
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardHeader
+            title="Related Jobs"
+            description='Hand-pick open roles to feature on this article (P1 "Article → Job" linking)'
+          />
+          <CardBody>
+            <JobLinkPicker
+              value={values.jobIds || []}
+              onChange={(ids) => set('jobIds', ids)}
+              initialJobs={post?.linkedJobs || []}
+            />
           </CardBody>
         </Card>
       </div>

@@ -87,6 +87,8 @@ export interface Post {
   reviewer?: { id: string; name: string; username: string } | null;
   category?: Category | null;
   tags?: { tag: Tag }[];
+  /** Article -> Job linking (P1) — jobs the editor hand-picked for this article. */
+  linkedJobs?: Job[];
 }
 
 export interface Comment {
@@ -194,6 +196,8 @@ export interface DeveloperResource {
   clickCount: number;
   createdAt: string;
   updatedAt: string;
+  /** Resource -> Job linking (P1) — jobs the editor hand-picked to feature alongside this resource. */
+  linkedJobs?: Job[];
 }
 
 export interface DashboardStats {
@@ -270,6 +274,28 @@ export interface NewsletterSponsorSlot {
   impressions: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface LearningPathStep {
+  id: string;
+  order: number;
+  note?: string | null;
+  resource: DeveloperResource;
+}
+
+export interface LearningPath {
+  id: string;
+  title: string;
+  slug: string;
+  description?: string | null;
+  coverImageUrl?: string | null;
+  isFeatured: boolean;
+  isActive: boolean;
+  order: number;
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: { id: string; username: string; name?: string | null } | null;
+  steps: LearningPathStep[];
 }
 
 export interface PaginatedOffset<T> {
@@ -359,7 +385,10 @@ export interface Job {
   postedById: string;
   viewCount: number;
   applicationCount: number;
+  externalApplyCount?: number;
   isFeatured: boolean;
+  verificationStatus?: 'UNVERIFIED' | 'VERIFIED' | 'FLAGGED';
+  verifiedAt?: string | null;
   seoTitle?: string | null;
   seoDescription?: string | null;
   seoKeywords?: string | null;

@@ -21,6 +21,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { PageSpinner } from '@/components/ui/Spinner';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Modal } from '@/components/ui/Modal';
+import { JobLinkPicker } from '@/components/jobs/JobLinkPicker';
 import { apiErrorMessage } from '@/lib/api';
 
 const RESOURCE_TYPES: ResourceType[] = [
@@ -43,6 +44,7 @@ const emptyForm: DeveloperResourceFormValues = {
   iconUrl: '',
   isFeatured: false,
   isActive: true,
+  jobIds: [],
 };
 
 export default function DeveloperResourcesPage() {
@@ -73,8 +75,8 @@ export default function DeveloperResourcesPage() {
         resourceType: resourceType || undefined,
       });
       setItems(res.items);
-      setTotal(res.total);
-      setTotalPages(res.totalPages || Math.max(1, Math.ceil(res.total / res.limit)));
+      setTotal(res.meta.total);
+      setTotalPages(res.meta.totalPages);
     } catch (err) {
       toast.error(apiErrorMessage(err, 'Failed to load developer resources'));
     } finally {
@@ -108,6 +110,7 @@ export default function DeveloperResourcesPage() {
       isFeatured: resource.isFeatured,
       isActive: resource.isActive,
       order: resource.order,
+      jobIds: resource.linkedJobs?.map((j) => j.id) || [],
     });
     setModalOpen(true);
   }
@@ -339,6 +342,13 @@ export default function DeveloperResourcesPage() {
                   addTag(tagInput);
                 }
               }}
+            />
+          </Field>
+          <Field label="Related Jobs" hint='Hand-pick open roles to feature alongside this resource (P1 "Resource → Job" linking)'>
+            <JobLinkPicker
+              value={form.jobIds || []}
+              onChange={(ids) => setForm({ ...form, jobIds: ids })}
+              initialJobs={editing?.linkedJobs || []}
             />
           </Field>
           <div className="flex items-center gap-6">

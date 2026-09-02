@@ -1,5 +1,5 @@
 import { api, unwrap } from '../api';
-import type { DeveloperResource, PaginatedOffset, ResourceType } from '../types';
+import type { DeveloperResource, ResourceType } from '../types';
 
 export interface ListDeveloperResourcesParams {
   page?: number;
@@ -9,9 +9,17 @@ export interface ListDeveloperResourcesParams {
   isActive?: boolean;
 }
 
+export interface DeveloperResourcesPage {
+  items: DeveloperResource[];
+  meta: { page: number; limit: number; total: number; totalPages: number };
+}
+
+// The backend returns { items, meta: { page, limit, total, totalPages } } (see
+// DeveloperResourcesService.findAllForManagement / offsetMeta) — NOT flattened
+// top-level total/totalPages fields, so this must NOT be typed as PaginatedOffset<T>.
 export async function listDeveloperResources(params: ListDeveloperResourcesParams = {}) {
   const res = await api.get('/cms/developer-resources', { params });
-  return unwrap<PaginatedOffset<DeveloperResource>>(res);
+  return unwrap<DeveloperResourcesPage>(res);
 }
 
 export async function fetchDeveloperResourceStats() {
@@ -29,6 +37,8 @@ export interface DeveloperResourceFormValues {
   isFeatured?: boolean;
   isActive?: boolean;
   order?: number;
+  /** Resource -> Job linking (P1) — job ids the editor hand-picked to feature alongside this resource. */
+  jobIds?: string[];
 }
 
 export async function createDeveloperResource(values: DeveloperResourceFormValues) {
