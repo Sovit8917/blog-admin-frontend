@@ -14,16 +14,26 @@ export const api = axios.create({
   withCredentials: true,
 });
 
+api.interceptors.request.use((config) => {
+  console.log('[api] request →', config.method?.toUpperCase(), (config.baseURL || '') + (config.url || ''));
+  return config;
+});
+
 api.interceptors.response.use(
-  (res) => res,
+  (res) => {
+    console.log('[api] response ←', res.status, res.config.url);
+    return res;
+  },
   async (error: AxiosError) => {
     const status = error.response?.status;
     const url = (error.config?.url as string) || '';
+    console.log('[api] ERROR response ←', status, url, 'data:', error.response?.data, 'message:', error.message);
 
     // A 401 here means the session cookie is missing/expired — Better Auth
     // manages its own rolling refresh server-side, so unlike the old JWT
     // setup there's nothing to retry; just bounce to /login.
     if (status === 401 && !url.includes('/auth/')) {
+      console.log('[api] 401 received, clearing session and redirecting to /login. Triggering URL was:', url);
       const { useAuthStore } = await import('./auth-store');
       useAuthStore.getState().clear();
       if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {

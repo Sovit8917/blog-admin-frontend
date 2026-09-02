@@ -39,7 +39,8 @@ export async function logout() {
 }
 
 export async function fetchMe(): Promise<CurrentUser> {
-  const { data } = await authClient.getSession();
+  const { data, error } = await authClient.getSession();
+  console.log('[fetchMe] getSession() result:', { data, error });
   if (!data?.user) throw new Error('Not authenticated');
   const u = data.user as Record<string, unknown>;
   return {
