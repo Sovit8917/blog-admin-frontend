@@ -19,6 +19,10 @@ export default function SettingsPage() {
   const [twitter, setTwitter] = useState('');
   const [linkedin, setLinkedin] = useState('');
   const [github, setGithub] = useState('');
+  const [telegram, setTelegram] = useState('');
+  const [whatsapp, setWhatsapp] = useState('');
+  const [instagram, setInstagram] = useState('');
+  const [facebook, setFacebook] = useState('');
   const [seoTitle, setSeoTitle] = useState('');
   const [seoDescription, setSeoDescription] = useState('');
 
@@ -40,6 +44,10 @@ export default function SettingsPage() {
         setTwitter(s.social_links?.twitter || '');
         setLinkedin(s.social_links?.linkedin || '');
         setGithub(s.social_links?.github || '');
+        setTelegram(s.social_links?.telegram || '');
+        setWhatsapp(s.social_links?.whatsapp || '');
+        setInstagram(s.social_links?.instagram || '');
+        setFacebook(s.social_links?.facebook || '');
         setSeoTitle(s.default_seo?.title || '');
         setSeoDescription(s.default_seo?.description || '');
         setAdsensePublisherId(s.adsense_publisher_id || '');
@@ -72,7 +80,7 @@ export default function SettingsPage() {
   async function saveSocial() {
     setSaving('social');
     try {
-      await upsertSetting('social_links', { twitter, linkedin, github }, 'social');
+      await upsertSetting('social_links', { twitter, linkedin, github, telegram, whatsapp, instagram, facebook }, 'social');
       toast.success('Social links saved');
     } catch (err) {
       toast.error(apiErrorMessage(err, 'Failed to save'));
@@ -143,6 +151,18 @@ export default function SettingsPage() {
           </Field>
           <Field label="GitHub">
             <Input value={github} onChange={(e) => setGithub(e.target.value)} placeholder="https://github.com/…" />
+          </Field>
+          <Field label="Telegram">
+            <Input value={telegram} onChange={(e) => setTelegram(e.target.value)} placeholder="https://t.me/…" />
+          </Field>
+          <Field label="WhatsApp">
+            <Input value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} placeholder="https://wa.me/…" />
+          </Field>
+          <Field label="Instagram">
+            <Input value={instagram} onChange={(e) => setInstagram(e.target.value)} placeholder="https://instagram.com/…" />
+          </Field>
+          <Field label="Facebook">
+            <Input value={facebook} onChange={(e) => setFacebook(e.target.value)} placeholder="https://facebook.com/…" />
           </Field>
           <div className="flex justify-end">
             <Button onClick={saveSocial} loading={saving === 'social'}>
