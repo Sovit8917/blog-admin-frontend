@@ -1,5 +1,5 @@
 import { api, unwrap } from '../api';
-import type { Post, PostStatus, PostType } from '../types';
+import type { Post, PostStatus, PostType, DifficultyLevel } from '../types';
 
 export interface ListPostsParams {
   page?: number;
@@ -50,6 +50,14 @@ export interface PostFormValues {
   noIndex?: boolean;
   /** Article -> Job linking (P1) — job ids the editor hand-picked for this article. */
   jobIds?: string[];
+  /** Tech/Software/AI content details — only relevant when category is a tech topic. */
+  techStack?: string[];
+  difficultyLevel?: DifficultyLevel | '';
+  githubUrl?: string;
+  demoUrl?: string;
+  aiModelsUsed?: string[];
+  toolsUsed?: string[];
+  prerequisites?: string;
 }
 
 export async function createPost(values: PostFormValues) {

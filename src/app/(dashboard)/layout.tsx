@@ -15,6 +15,7 @@ const TITLES: Record<string, string> = {
   '/media': 'Media Library',
   '/users': 'Users',
   '/settings': 'Settings',
+  '/profile': 'My Profile',
   '/jobs': 'Jobs',
   '/companies': 'Companies',
   '/skills': 'Skills',

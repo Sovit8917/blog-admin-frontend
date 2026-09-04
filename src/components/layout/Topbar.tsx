@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { LogOut, ChevronDown, User as UserIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '@/lib/auth-store';
@@ -40,8 +41,13 @@ export function Topbar({ title }: { title: string }) {
           onClick={() => setOpen((v) => !v)}
           className="flex items-center gap-2.5 rounded-xl border border-transparent px-2 py-1.5 transition-colors hover:border-slate-200 hover:bg-slate-50"
         >
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-[12px] font-semibold text-brand-700">
-            {initials(user?.name || user?.username)}
+          <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-brand-100 text-[12px] font-semibold text-brand-700">
+            {user?.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={user.avatarUrl} alt={user.name || user.username} className="h-full w-full object-cover" />
+            ) : (
+              initials(user?.name || user?.username)
+            )}
           </div>
           <div className="hidden text-left sm:block">
             <p className="text-[13px] font-medium leading-tight text-slate-800">{user?.name || user?.username}</p>
@@ -61,6 +67,15 @@ export function Topbar({ title }: { title: string }) {
               <div className="px-2.5 py-2">
                 <p className="truncate text-[12.5px] font-medium text-slate-700">{user?.email}</p>
               </div>
+              <div className="my-1 h-px bg-slate-100" />
+              <Link
+                href="/profile"
+                onClick={() => setOpen(false)}
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[13px] font-medium text-slate-700 hover:bg-slate-50"
+              >
+                <UserIcon className="h-3.5 w-3.5" />
+                My Profile
+              </Link>
               <div className="my-1 h-px bg-slate-100" />
               <button
                 onClick={handleLogout}

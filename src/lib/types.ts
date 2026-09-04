@@ -89,7 +89,17 @@ export interface Post {
   tags?: { tag: Tag }[];
   /** Article -> Job linking (P1) — jobs the editor hand-picked for this article. */
   linkedJobs?: Job[];
+  /** Tech/Software/AI content details — only relevant when category is a tech topic. */
+  techStack?: string[];
+  difficultyLevel?: DifficultyLevel | null;
+  githubUrl?: string | null;
+  demoUrl?: string | null;
+  aiModelsUsed?: string[];
+  toolsUsed?: string[];
+  prerequisites?: string | null;
 }
+
+export type DifficultyLevel = 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
 
 export interface Comment {
   id: string;

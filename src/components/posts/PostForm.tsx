@@ -10,7 +10,7 @@ import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { MediaPickerModal } from '@/components/media/MediaPickerModal';
 import { JobLinkPicker } from '@/components/jobs/JobLinkPicker';
-import type { Category, Post, PostStatus, PostType, Tag } from '@/lib/types';
+import type { Category, DifficultyLevel, Post, PostStatus, PostType, Tag } from '@/lib/types';
 import { CAREER_CONTENT_TYPES } from '@/lib/types';
 import { listCategories } from '@/lib/services/categories';
 import { listTags, createTag } from '@/lib/services/tags';
@@ -19,6 +19,21 @@ import { apiErrorMessage } from '@/lib/api';
 import { slugPreview } from '@/lib/utils';
 
 const STATUS_OPTIONS: PostStatus[] = ['DRAFT', 'IN_REVIEW', 'SCHEDULED', 'PUBLISHED', 'ARCHIVED'];
+const DIFFICULTY_OPTIONS: DifficultyLevel[] = ['BEGINNER', 'INTERMEDIATE', 'ADVANCED'];
+const DIFFICULTY_LABELS: Record<DifficultyLevel, string> = {
+  BEGINNER: 'Beginner',
+  INTERMEDIATE: 'Intermediate',
+  ADVANCED: 'Advanced',
+};
+// Matches the category name/slug against Technology/Software/AI-ish keywords so
+// the "Tech Details" card only shows up where it's relevant, instead of
+// cluttering the form for career-advice/news posts.
+const TECH_CATEGORY_KEYWORDS = ['tech', 'software', 'ai', 'programming', 'developer', 'dev', 'code', 'engineering'];
+function isTechCategory(category?: Category | null) {
+  if (!category) return false;
+  const haystack = `${category.name} ${category.slug}`.toLowerCase();
+  return TECH_CATEGORY_KEYWORDS.some((kw) => haystack.includes(kw));
+}
 const GENERAL_TYPES: PostType[] = ['ARTICLE', 'TUTORIAL', 'NEWS'];
 const POST_TYPE_LABELS: Record<PostType, string> = {
   ARTICLE: 'Article',
@@ -37,6 +52,9 @@ export function PostForm({ post }: { post?: Post }) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [allTags, setAllTags] = useState<Tag[]>([]);
   const [tagInput, setTagInput] = useState('');
+  const [techStackInput, setTechStackInput] = useState('');
+  const [aiModelInput, setAiModelInput] = useState('');
+  const [toolInput, setToolInput] = useState('');
   const [saving, setSaving] = useState<'idle' | 'draft' | 'submit'>('idle');
   const [pickerTarget, setPickerTarget] = useState<'cover' | 'og' | null>(null);
 
@@ -58,7 +76,17 @@ export function PostForm({ post }: { post?: Post }) {
     canonicalUrl: post?.canonicalUrl || '',
     noIndex: post?.noIndex || false,
     jobIds: post?.linkedJobs?.map((j) => j.id) || [],
+    techStack: post?.techStack || [],
+    difficultyLevel: post?.difficultyLevel || '',
+    githubUrl: post?.githubUrl || '',
+    demoUrl: post?.demoUrl || '',
+    aiModelsUsed: post?.aiModelsUsed || [],
+    toolsUsed: post?.toolsUsed || [],
+    prerequisites: post?.prerequisites || '',
   });
+
+  const selectedCategory = categories.find((c) => c.id === values.categoryId) || post?.category;
+  const showTechDetails = isTechCategory(selectedCategory);
 
   useEffect(() => {
     listCategories(true).then(setCategories).catch(() => {});
@@ -84,6 +112,22 @@ export function PostForm({ post }: { post?: Post }) {
     set('tags', (values.tags || []).filter((t) => t !== name));
   }
 
+  // Shared add/remove for the tech-details chip fields (techStack, aiModelsUsed, toolsUsed).
+  function addChip(key: 'techStack' | 'aiModelsUsed' | 'toolsUsed', value: string, clear: () => void) {
+    const clean = value.trim();
+    if (!clean) return;
+    const current = values[key] || [];
+    if (current.some((v) => v.toLowerCase() === clean.toLowerCase())) {
+      clear();
+      return;
+    }
+    set(key, [...current, clean]);
+    clear();
+  }
+  function removeChip(key: 'techStack' | 'aiModelsUsed' | 'toolsUsed', value: string) {
+    set(key, (values[key] || []).filter((v) => v !== value));
+  }
+
   async function persist(status?: PostStatus) {
     if (!values.title.trim() || !values.content.trim()) {
       toast.error('Title and content are required');
@@ -100,6 +144,10 @@ export function PostForm({ post }: { post?: Post }) {
         coverImageUrl: values.coverImageUrl || undefined,
         ogImageUrl: values.ogImageUrl || undefined,
         canonicalUrl: values.canonicalUrl || undefined,
+        difficultyLevel: values.difficultyLevel || undefined,
+        githubUrl: values.githubUrl || undefined,
+        demoUrl: values.demoUrl || undefined,
+        prerequisites: values.prerequisites || undefined,
       };
       if (isEdit) {
         await updatePost(post!.id, payload);
@@ -299,6 +347,132 @@ export function PostForm({ post }: { post?: Post }) {
             </Select>
           </CardBody>
         </Card>
+
+        {showTechDetails && (
+          <Card>
+            <CardHeader
+              title="Tech Details"
+              description="Shown because this post's category is Technology/Software/AI related"
+            />
+            <CardBody className="space-y-4">
+              <Field label="Difficulty Level">
+                <Select
+                  value={values.difficultyLevel}
+                  onChange={(e) => set('difficultyLevel', e.target.value as DifficultyLevel | '')}
+                >
+                  <option value="">Not specified</option>
+                  {DIFFICULTY_OPTIONS.map((d) => (
+                    <option key={d} value={d}>
+                      {DIFFICULTY_LABELS[d]}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+
+              <Field label="Tech Stack" hint="e.g. React, Node.js, PostgreSQL">
+                <div className="flex flex-wrap gap-1.5">
+                  {(values.techStack || []).map((t) => (
+                    <Badge key={t} tone="blue" className="gap-1">
+                      {t}
+                      <button onClick={() => removeChip('techStack', t)} className="hover:text-blue-900">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+                <Input
+                  className="mt-2"
+                  placeholder="Type a technology & press Enter"
+                  value={techStackInput}
+                  onChange={(e) => setTechStackInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addChip('techStack', techStackInput, () => setTechStackInput(''));
+                    }
+                  }}
+                />
+              </Field>
+
+              <Field label="AI Models Used" hint="e.g. GPT-4, Claude, Llama 3">
+                <div className="flex flex-wrap gap-1.5">
+                  {(values.aiModelsUsed || []).map((t) => (
+                    <Badge key={t} tone="blue" className="gap-1">
+                      {t}
+                      <button onClick={() => removeChip('aiModelsUsed', t)} className="hover:text-blue-900">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+                <Input
+                  className="mt-2"
+                  placeholder="Type a model & press Enter"
+                  value={aiModelInput}
+                  onChange={(e) => setAiModelInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addChip('aiModelsUsed', aiModelInput, () => setAiModelInput(''));
+                    }
+                  }}
+                />
+              </Field>
+
+              <Field label="Tools Used" hint="e.g. Docker, Figma, Kubernetes">
+                <div className="flex flex-wrap gap-1.5">
+                  {(values.toolsUsed || []).map((t) => (
+                    <Badge key={t} tone="blue" className="gap-1">
+                      {t}
+                      <button onClick={() => removeChip('toolsUsed', t)} className="hover:text-blue-900">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+                <Input
+                  className="mt-2"
+                  placeholder="Type a tool & press Enter"
+                  value={toolInput}
+                  onChange={(e) => setToolInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addChip('toolsUsed', toolInput, () => setToolInput(''));
+                    }
+                  }}
+                />
+              </Field>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Field label="GitHub URL">
+                  <Input
+                    placeholder="https://github.com/…"
+                    value={values.githubUrl}
+                    onChange={(e) => set('githubUrl', e.target.value)}
+                  />
+                </Field>
+                <Field label="Demo URL">
+                  <Input
+                    placeholder="https://…"
+                    value={values.demoUrl}
+                    onChange={(e) => set('demoUrl', e.target.value)}
+                  />
+                </Field>
+              </div>
+
+              <Field label="Prerequisites" hint="Short note on required background knowledge">
+                <Textarea
+                  rows={2}
+                  maxLength={300}
+                  value={values.prerequisites}
+                  onChange={(e) => set('prerequisites', e.target.value)}
+                  placeholder="e.g. Basic JavaScript and REST API knowledge"
+                />
+              </Field>
+            </CardBody>
+          </Card>
+        )}
 
         <Card>
           <CardHeader title="Tags" />
