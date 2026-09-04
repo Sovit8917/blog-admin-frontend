@@ -16,6 +16,11 @@ export async function moderateComment(id: string, status: CommentStatus) {
   return unwrap<Comment>(res);
 }
 
+export async function updateCommentContent(id: string, content: string) {
+  const res = await api.patch(`/cms/comments/${id}`, { content });
+  return unwrap<Comment>(res);
+}
+
 export async function deleteComment(id: string) {
   const res = await api.delete(`/comments/${id}`);
   return unwrap<{ message: string }>(res);

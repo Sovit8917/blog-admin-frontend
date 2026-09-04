@@ -2,8 +2,13 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import toast from 'react-hot-toast';
-import { MessageSquare, Check, X, ShieldAlert, Trash2 } from 'lucide-react';
-import { listCommentsForModeration, moderateComment, deleteComment } from '@/lib/services/comments';
+import { MessageSquare, Check, X, ShieldAlert, Trash2, Pencil } from 'lucide-react';
+import {
+  listCommentsForModeration,
+  moderateComment,
+  deleteComment,
+  updateCommentContent,
+} from '@/lib/services/comments';
 import type { Comment, CommentStatus } from '@/lib/types';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -12,6 +17,8 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { PageSpinner } from '@/components/ui/Spinner';
 import { Pagination } from '@/components/ui/Pagination';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { Modal } from '@/components/ui/Modal';
+import { Field, Textarea } from '@/components/ui/Input';
 import { formatDateTime, cn } from '@/lib/utils';
 import { apiErrorMessage } from '@/lib/api';
 import { usePermissions } from '@/lib/permissions-store';
@@ -34,6 +41,9 @@ export default function CommentsPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [toDelete, setToDelete] = useState<Comment | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [editingComment, setEditingComment] = useState<Comment | null>(null);
+  const [editContent, setEditContent] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -55,6 +65,30 @@ export default function CommentsPage() {
   useEffect(() => {
     setPage(1);
   }, [tab]);
+
+  function startEdit(comment: Comment) {
+    setEditingComment(comment);
+    setEditContent(comment.content);
+  }
+
+  async function handleSaveEdit() {
+    if (!editingComment) return;
+    if (!editContent.trim()) {
+      toast.error('Comment content cannot be empty');
+      return;
+    }
+    setSavingEdit(true);
+    try {
+      await updateCommentContent(editingComment.id, editContent.trim());
+      toast.success('Comment updated successfully');
+      setEditingComment(null);
+      load();
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to update comment content'));
+    } finally {
+      setSavingEdit(false);
+    }
+  }
 
   async function handleModerate(id: string, status: CommentStatus) {
     setBusyId(id);
@@ -128,6 +162,16 @@ export default function CommentsPage() {
                       )}
                     </div>
                     <div className="flex shrink-0 gap-1.5">
+                      {can('comments', 'update') && (
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          title="Edit Comment"
+                          onClick={() => startEdit(c)}
+                        >
+                          <Pencil className="h-3.5 w-3.5 text-slate-600" />
+                        </Button>
+                      )}
                       {can('comments', 'update') && c.status !== 'APPROVED' && (
                         <Button
                           variant="outline"
@@ -176,6 +220,42 @@ export default function CommentsPage() {
         )}
       </Card>
 
+      {/* Edit Comment Modal */}
+      <Modal
+        open={!!editingComment}
+        onClose={() => setEditingComment(null)}
+        title="Edit Comment"
+        description="Modify or redact the comment content as an administrator."
+      >
+        <div className="space-y-4">
+          <Field label="Comment Content" required>
+            <Textarea
+              rows={4}
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+              placeholder="Edit comment content..."
+            />
+          </Field>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => setEditingComment(null)}
+              disabled={savingEdit}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSaveEdit}
+              loading={savingEdit}
+            >
+              Save Changes
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
       <ConfirmDialog
         open={!!toDelete}
         onClose={() => setToDelete(null)}
@@ -187,3 +267,4 @@ export default function CommentsPage() {
     </div>
   );
 }
+

@@ -27,6 +27,7 @@ import { Badge, statusTone } from '@/components/ui/Badge';
 import { PageSpinner } from '@/components/ui/Spinner';
 import { formatDateTime } from '@/lib/utils';
 import { useAuthStore } from '@/lib/auth-store';
+import { Pagination } from '@/components/ui/Pagination';
 
 const POST_TYPE_LABELS: Record<PostType, string> = {
   ARTICLE: 'Article',
@@ -43,9 +44,13 @@ function daysUntil(dateStr: string) {
   return Math.max(0, Math.ceil(diff / 86400000));
 }
 
+const DASHBOARD_LIST_PAGE_SIZE = 5;
+
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [postsPage, setPostsPage] = useState(1);
+  const [activityPage, setActivityPage] = useState(1);
   const user = useAuthStore((s) => s.user);
 
   useEffect(() => {
@@ -69,6 +74,20 @@ export default function DashboardPage() {
   const careerCount = byTypeArray
     .filter((t) => CAREER_CONTENT_TYPES.includes(t.postType))
     .reduce((sum, t) => sum + t._count, 0);
+
+  const totalRecentPosts = stats.recentPosts?.length || 0;
+  const totalRecentPostsPages = Math.max(1, Math.ceil(totalRecentPosts / DASHBOARD_LIST_PAGE_SIZE));
+  const paginatedRecentPosts = (stats.recentPosts || []).slice(
+    (postsPage - 1) * DASHBOARD_LIST_PAGE_SIZE,
+    postsPage * DASHBOARD_LIST_PAGE_SIZE,
+  );
+
+  const totalRecentActivity = stats.recentActivity?.length || 0;
+  const totalRecentActivityPages = Math.max(1, Math.ceil(totalRecentActivity / DASHBOARD_LIST_PAGE_SIZE));
+  const paginatedRecentActivity = (stats.recentActivity || []).slice(
+    (activityPage - 1) * DASHBOARD_LIST_PAGE_SIZE,
+    activityPage * DASHBOARD_LIST_PAGE_SIZE,
+  );
 
   return (
     <div className="space-y-6">
@@ -218,66 +237,97 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <Card>
-          <CardHeader
-            title="Recently updated posts"
-            action={
-              <Link href="/posts" className="flex items-center gap-1 text-[12.5px] font-medium text-brand-600 hover:text-brand-700">
-                View all <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            }
-          />
-          <CardBody className="p-0">
-            {!stats.recentPosts?.length ? (
-              <p className="px-5 py-8 text-center text-[13px] text-slate-400">No posts yet.</p>
-            ) : (
-              <ul className="divide-y divide-slate-50">
-                {stats.recentPosts.map((p) => (
-                  <li key={p.id}>
-                    <Link
-                      href={`/posts/${p.id}`}
-                      className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-slate-50"
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate text-[13.5px] font-medium text-slate-800">{p.title}</p>
-                        <p className="mt-0.5 flex items-center gap-1 text-[11.5px] text-slate-400">
-                          <Clock className="h-3 w-3" /> {formatDateTime(p.updatedAt)}
-                        </p>
-                      </div>
-                      <Badge tone={statusTone(p.status)}>{p.status}</Badge>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardBody>
+        <Card className="flex flex-col justify-between">
+          <div>
+            <CardHeader
+              title="Recently updated posts"
+              action={
+                <Link href="/posts" className="flex items-center gap-1 text-[12.5px] font-medium text-brand-600 hover:text-brand-700">
+                  View all <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              }
+            />
+            <CardBody className="p-0">
+              {!stats.recentPosts?.length ? (
+                <p className="px-5 py-8 text-center text-[13px] text-slate-400">No posts yet.</p>
+              ) : (
+                <ul className="divide-y divide-slate-50">
+                  {paginatedRecentPosts.map((p) => (
+                    <li key={p.id}>
+                      <Link
+                        href={`/posts/${p.id}`}
+                        className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-slate-50"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-[13.5px] font-medium text-slate-800">{p.title}</p>
+                          <p className="mt-0.5 flex items-center gap-1 text-[11.5px] text-slate-400">
+                            <Clock className="h-3 w-3" /> {formatDateTime(p.updatedAt)}
+                          </p>
+                        </div>
+                        <Badge tone={statusTone(p.status)}>{p.status}</Badge>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardBody>
+          </div>
+          {totalRecentPosts > DASHBOARD_LIST_PAGE_SIZE && (
+            <Pagination
+              page={postsPage}
+              totalPages={totalRecentPostsPages}
+              total={totalRecentPosts}
+              limit={DASHBOARD_LIST_PAGE_SIZE}
+              onChange={setPostsPage}
+            />
+          )}
         </Card>
 
-        <Card>
-          <CardHeader title="Recent activity" description="Latest audit log entries" />
-          <CardBody className="p-0">
-            {!stats.recentActivity?.length ? (
-              <p className="px-5 py-8 text-center text-[13px] text-slate-400">No activity recorded yet.</p>
-            ) : (
-              <ul className="divide-y divide-slate-50">
-                {stats.recentActivity.map((a) => (
-                  <li key={a.id} className="flex items-center justify-between gap-3 px-5 py-3">
-                    <div className="min-w-0">
-                      <p className="truncate text-[13px] font-medium text-slate-700">
-                        {a.action.replace(/_/g, ' ')} <span className="text-slate-400">· {a.entityType}</span>
-                      </p>
-                      <p className="mt-0.5 text-[11.5px] text-slate-400">
-                        {a.user?.name || a.user?.username || 'System'} · {formatDateTime(a.createdAt)}
-                      </p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardBody>
+        <Card className="flex flex-col justify-between">
+          <div>
+            <CardHeader
+              title="Recent activity"
+              description="Latest audit log entries"
+              action={
+                <Link href="/audit-log" className="flex items-center gap-1 text-[12.5px] font-medium text-brand-600 hover:text-brand-700">
+                  View all <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              }
+            />
+            <CardBody className="p-0">
+              {!stats.recentActivity?.length ? (
+                <p className="px-5 py-8 text-center text-[13px] text-slate-400">No activity recorded yet.</p>
+              ) : (
+                <ul className="divide-y divide-slate-50">
+                  {paginatedRecentActivity.map((a) => (
+                    <li key={a.id} className="flex items-center justify-between gap-3 px-5 py-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-[13px] font-medium text-slate-700">
+                          {a.action.replace(/_/g, ' ')} <span className="text-slate-400">· {a.entityType}</span>
+                        </p>
+                        <p className="mt-0.5 text-[11.5px] text-slate-400">
+                          {a.user?.name || a.user?.username || 'System'} · {formatDateTime(a.createdAt)}
+                        </p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardBody>
+          </div>
+          {totalRecentActivity > DASHBOARD_LIST_PAGE_SIZE && (
+            <Pagination
+              page={activityPage}
+              totalPages={totalRecentActivityPages}
+              total={totalRecentActivity}
+              limit={DASHBOARD_LIST_PAGE_SIZE}
+              onChange={setActivityPage}
+            />
+          )}
         </Card>
       </div>
     </div>
   );
 }
+
 
